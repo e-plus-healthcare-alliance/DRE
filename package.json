@@ -53,6 +53,7 @@
     "passport": "0.2.x",
     "passport-local": "1.0.x",
     "passport-local-mongoose": "0.3.x",
+    "plato": "^1.3.0",
     "redis": "0.10.3",
     "request": "2.33.x",
     "serve-favicon": "2.1.5",

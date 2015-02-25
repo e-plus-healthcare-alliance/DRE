@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/directives/measurements.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/directives/measurements.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">68.70</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">410</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">31.08</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">4.91</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+/**
+ * @ngdoc directive
+ * @name phrPrototypeApp.directive:measurements
+ * @description
+ * # measurements
+ */
+angular.module(&#039;phrPrototypeApp&#039;).directive(&#039;d3template&#039;, [&#039;$window&#039;, &#039;$timeout&#039;, &#039;d3Service&#039;,
+        function ($window, $timeout, d3Service) {
+            return {
+                restrict: &#039;A&#039;,
+                scope: {
+                    data: &#039;=&#039;
+                },
+                link: function (scope, ele, attrs) {
+                    //bring in d3 code as a service
+                    d3Service.d3().then(function (d3) {
+                        var renderTimeout;
+                        var margin = {
+                                top: 0,
+                                right: 20,
+                                bottom: 28,
+                                left: 20
+                            },
+                            w = 300 - margin.left - margin.right,
+                            h = 200 - margin.top - margin.bottom;
+                        //set initial svg values
+                        var svg = d3.select(ele[0]).append(&#039;svg&#039;).attr(&#039;class&#039;, &#039;chart&#039;).attr(&#039;width&#039;, w + margin.left + margin.right).attr(&#039;height&#039;, h + margin.top + margin.bottom).append(&#039;g&#039;).attr(&#039;transform&#039;, &#039;translate(&#039; + margin.left + &#039;,&#039; + margin.top + &#039;)&#039;);
+                        //watch window resize to re-render
+                        $window.onresize = function () {
+                            scope.$apply();
+                        };
+
+                        scope.$watch(function () {
+                            return angular.element($window)[0].innerWidth;
+                        }, function () {
+                            scope.render(scope.data);
+                        });
+
+                        //watch your attributes for changes to re-render
+                        scope.$watch(&#039;data&#039;, function (newVals, oldVals) {
+                            scope.render(newVals);
+                        }, true);
+                        //called to render chart
+                        scope.render = function (data) {
+                            console.log(&quot;d3template DIRECTIVE RENDER&quot;);
+                            //clean svg
+                            svg.selectAll(&#039;*&#039;).remove();
+                            //check to see if there is any data before drawing the chart (enable when using data attribute)
+                            //if (!data)
+                            //  return;
+                            if (renderTimeout) {
+                                clearTimeout(renderTimeout);
+                            }
+                            renderTimeout = $timeout(function () {
+                                //updates chart size on page resize
+                                if (d3.select(ele[0]).node().offsetWidth &gt; 0) {
+                                    w = d3.select(ele[0]).node().offsetWidth - margin.left - margin.right;
+                                    h = d3.select(ele[0]).node().offsetHeight - margin.top - margin.bottom;
+                                    svg.attr(&#039;width&#039;, w + margin.left + margin.right).attr(&#039;height&#039;, h + margin.top + margin.bottom);
+                                }
+                                //write your chart code here!
+                                svg.append(&#039;rect&#039;).attr(&#039;width&#039;, w).attr(&#039;height&#039;, h).attr(&#039;fill&#039;, &#039;black&#039;);
+                            }, 100);
+                        };
+                    });
+                }
+            };
+        }
+    ])
+    /*.directive(&#039;measurements&#039;, function ($window) {
+        return {
+            template: &#039;&lt;svg width=&quot;1000&quot;&gt;&lt;/svg&gt;&#039;,
+            restrict: &#039;EA&#039;,
+            link: function postLink(scope, element, attrs) {
+                //Initial Variables.
+                var d3 = $window.d3;
+                var rawSvg = element.find(&quot;svg&quot;)[0];
+                var svg = d3.select(rawSvg);
+                var vitals = scope.entries.vitals;
+                var graphVitals = [];
+                var graphVitalsTwo = [];
+                var graphDates = [];
+                var graphValues = [];
+                var margin = 60;
+                var width = 1000;
+                var height = 200;
+                //Override variables.
+                if (attrs.svgWidth) {
+                    width = attrs.svgWidth;
+                }
+                if (attrs.svgHeight) {
+                    width = attrs.svgHeight;
+                }
+                //ISO 8601 Format.
+                console.log(&quot;measurement.js vitals PRE&quot;);
+                var format = d3.time.format(&quot;%Y-%m-%dT%H:%M:%SZ&quot;);
+                svg.attr(&quot;height&quot;, height);
+                svg.attr(&quot;width&quot;, width);
+
+
+                console.log(&quot;measurement.js vitals&quot;, vitals);
+
+                //Restructure for graph.
+                _.each(vitals, function (entry) {
+                    var tmpVital = {};
+                    if (attrs.graphType === &quot;weight&quot;) {
+                        if (entry.data.vital.name === &quot;Patient Body Weight - Measured&quot;) {
+                            tmpVital.value = entry.data.value;
+                            tmpVital.unit = entry.data.unit;
+                            tmpVital.date = format.parse(entry.data.date_time.point.date);
+                            graphVitals.push(tmpVital);
+                            graphDates.push(tmpVital.date);
+                            graphValues.push(tmpVital.value);
+                        }
+                    }
+                    if (attrs.graphType === &quot;bloodPressure&quot;) {
+                        if (entry.data.vital.name === &quot;Intravascular Diastolic&quot;) {
+                            tmpVital.value = entry.data.value;
+                            tmpVital.unit = entry.data.unit;
+                            tmpVital.date = format.parse(entry.data.date_time.point.date);
+                            graphVitals.push(tmpVital);
+                            graphDates.push(tmpVital.date);
+                            graphValues.push(tmpVital.value);
+                        }
+                        if (entry.data.vital.name === &quot;Intravascular Systolic&quot;) {
+                            tmpVital.value = entry.data.value;
+                            tmpVital.unit = entry.data.unit;
+                            tmpVital.date = format.parse(entry.data.date_time.point.date);
+                            graphVitalsTwo.push(tmpVital);
+                            graphDates.push(tmpVital.date);
+                            graphValues.push(tmpVital.value);
+                        }
+                    }
+                });
+                var padding = 30;
+                var pathClass = &quot;path&quot;;
+                var xTimeScale, yTimeScale, xAxisGen, yAxisGen, lineFun;
+
+                function setChartParameters() {
+                    xTimeScale = d3.time.scale().domain([d3.min(graphDates), d3.max(graphDates)]).range([padding - 2, rawSvg.clientWidth - padding - 2]);
+                    yTimeScale = d3.scale.linear().domain([d3.min(graphValues) - (d3.min(graphValues) * 0.1), d3.max(graphValues) + (d3.max(graphValues) * 0.1)]).range([rawSvg.clientHeight - padding, 0]);
+                    xAxisGen = d3.svg.axis().scale(xTimeScale).orient(&quot;bottom&quot;).tickFormat(d3.time.format(&quot;%m/%d&quot;)).outerTickSize([2]).tickValues([d3.min(graphDates), d3.max(graphDates)]);
+                    yAxisGen = d3.svg.axis().scale(yTimeScale).orient(&quot;left&quot;).ticks(4).outerTickSize([2]);
+                    lineFun = d3.svg.line().x(function (d) {
+                        return xTimeScale(d.date);
+                    }).y(function (d) {
+                        return yTimeScale(d.value);
+                    }).interpolate(&quot;basis&quot;);
+                }
+
+                function drawLineChart() {
+                    setChartParameters();
+                    svg.append(&quot;svg:g&quot;).attr(&quot;class&quot;, &quot;x axis&quot;).attr(&quot;transform&quot;, &quot;translate(0,&quot; + (height - (padding) + 10) + &quot;)&quot;).call(xAxisGen);
+                    svg.append(&quot;svg:g&quot;).attr(&quot;class&quot;, &quot;y axis&quot;).attr(&quot;transform&quot;, &quot;translate(&quot; + (padding) + &quot;,10)&quot;).call(yAxisGen);
+                    if (graphVitals.length &gt; 0) {
+                        svg.append(&quot;svg:path&quot;).attr({
+                            d: lineFun(graphVitals),
+                            &quot;stroke&quot;: &quot;#6AA6FF&quot;,
+                            &quot;stroke-width&quot;: 2,
+                            &quot;fill&quot;: &quot;none&quot;,
+                            &quot;class&quot;: pathClass
+                        });
+                    }
+                    if (graphVitalsTwo.length &gt; 0) {
+                        svg.append(&quot;svg:path&quot;).attr({
+                            d: lineFun(graphVitalsTwo),
+                            &quot;stroke&quot;: &quot;#6AA6FF&quot;,
+                            &quot;stroke-width&quot;: 2,
+                            &quot;fill&quot;: &quot;none&quot;,
+                            &quot;class&quot;: pathClass
+                        });
+                    }
+                }
+                console.log(&quot;measurements DIRECTIVE&quot;);
+
+                drawLineChart();
+            }
+        };
+    }) */
+    .directive(&#039;linechart&#039;, [&#039;$window&#039;, &#039;$timeout&#039;, &#039;d3Service&#039;,
+        function ($window, $timeout, d3Service) {
+            return {
+                restrict: &#039;A&#039;,
+                scope: {
+                    data: &#039;=&#039;
+                },
+                link: function (scope, ele, attrs) {
+                    //bring in d3 code as a service
+                    d3Service.d3().then(function (d3) {
+                        var renderTimeout;
+                        var margin = {
+                                top: 0,
+                                right: 20,
+                                bottom: 28,
+                                left: 20
+                            },
+                            w = 1000 - margin.left - margin.right,
+                            h = 250 - margin.top - margin.bottom;
+                        //set initial svg values
+                        var svg = d3.select(ele[0]).append(&#039;svg&#039;).attr(&#039;class&#039;, &#039;chart&#039;).attr(&#039;width&#039;, w + margin.left + margin.right).attr(&#039;height&#039;, h + margin.top + margin.bottom).append(&#039;g&#039;).attr(&#039;transform&#039;, &#039;translate(&#039; + margin.left + &#039;,&#039; + margin.top + &#039;)&#039;);
+                        //watch window resize to re-render
+                        $window.onresize = function () {
+                            console.log(&quot;RESIZE&quot;);
+
+                            scope.$apply();
+                        };
+                        scope.$watch(function () {
+                            return angular.element($window)[0].innerWidth;
+                        }, function () {
+                            console.log(&quot;WIDTH CHANGES&quot;);
+
+                            scope.render(scope.data);
+                        });
+
+                        scope.$on(&#039;tabchange&#039;, function (event, args) {
+                            console.log(&quot;TAB CHANGES&quot;);
+                            scope.render(scope.data);
+                        });
+
+                        //watch your attributes for changes to re-render
+                        scope.$watch(&#039;data&#039;, function (newVals, oldVals) {
+                            console.log(&quot;DATA CHANGES&quot;);
+                            scope.render(newVals);
+                        }, true);
+
+                        //called to render chart
+                        scope.render = function (entries) {
+                            var vitals = [];
+                            _.each(entries, function (entry) {
+                                if (entry.category === &quot;vitals&quot;) {
+                                    console.log(&quot;entry &gt;&gt;&gt;&gt;&gt; &quot;, entry.metadata.datetime[0].date);
+                                    vitals.push(entry);
+                                }
+                            });
+                            console.log(&quot;linechart DIRECTIVE RENDER&quot;);
+
+                            console.log(&quot;VITALS &quot;, vitals);
+
+                            if (vitals.length === 0) {
+                                return;
+                            }
+
+                            //clean svg
+                            svg.selectAll(&#039;*&#039;).remove();
+                            //check to see if there is any data before drawing the chart (enable when using data attribute)
+                            //if (!data)
+                            //  return;
+                            if (renderTimeout) {
+                                clearTimeout(renderTimeout);
+                            }
+                            renderTimeout = $timeout(function () {
+                                //updates chart size on page resize
+                                if (d3.select(ele[0]).node().offsetWidth &gt; 0) {
+                                    w = d3.select(ele[0]).node().offsetWidth - margin.left - margin.right;
+                                    h = d3.select(ele[0]).node().offsetHeight - margin.top - margin.bottom;
+                                    svg.attr(&#039;width&#039;, w + margin.left + margin.right).attr(&#039;height&#039;, h + margin.top + margin.bottom);
+                                }
+                                //write your chart code here!
+                                var graphVitals = [];
+                                var graphVitalsTwo = [];
+                                var graphDates = [];
+                                var graphValues = [];
+                                var yAxisValues = [];
+                                var format = d3.time.format(&quot;%Y-%m-%dT%H:%M:%S.%LZ&quot;);
+                                _.each(vitals, function (entry) {
+                                    var tmpVital = {};
+                                    if (attrs.graphType === &quot;weight&quot;) {
+                                        if (entry.data.vital.name === &quot;Patient Body Weight - Measured&quot;) {
+                                            tmpVital.value = entry.data.value;
+                                            tmpVital.unit = entry.data.unit;
+                                            tmpVital.date = format.parse(entry.data.date_time.point.date);
+                                            graphVitals.push(tmpVital);
+                                            graphDates.push(tmpVital.date);
+                                            graphValues.push(tmpVital.value);
+                                        }
+                                        yAxisValues = [130, 140, 150, 160];
+                                    }
+                                    if (attrs.graphType === &quot;bloodPressure&quot;) {
+                                        if (entry.data.vital.name === &quot;Intravascular Diastolic&quot;) {
+                                            tmpVital.value = entry.data.value;
+                                            tmpVital.unit = entry.data.unit;
+                                            tmpVital.date = format.parse(entry.data.date_time.point.date);
+                                            graphVitals.push(tmpVital);
+                                            graphDates.push(tmpVital.date);
+                                            graphValues.push(tmpVital.value);
+                                        }
+                                        if (entry.data.vital.name === &quot;Intravascular Systolic&quot;) {
+                                            tmpVital.value = entry.data.value;
+                                            tmpVital.unit = entry.data.unit;
+                                            tmpVital.date = format.parse(entry.data.date_time.point.date);
+                                            graphVitalsTwo.push(tmpVital);
+                                            graphDates.push(tmpVital.date);
+                                            graphValues.push(tmpVital.value);
+                                        }
+                                        yAxisValues = [80, 100, 120, 140];
+                                    }
+                                });
+                                var padding = 30;
+                                var pathClass = &quot;path&quot;;
+                                var xScale, yScale, xAxisGen, yAxisGen, lineFun;
+
+                                function setChartParameters() {
+                                    console.log(&quot;&gt;&gt;GRAPH DATES &quot;, graphDates);
+
+                                    xScale = d3.time.scale().domain([d3.min(graphDates), d3.max(graphDates)]).nice(d3.time.week).range([margin.left, w - margin.right]);
+                                    yScale = d3.scale.linear().domain([d3.min(graphValues) - (d3.min(graphValues) * 0.1), d3.max(graphValues) + (d3.max(graphValues) * 0.1)]).range([h - margin.top, margin.bottom]);
+                                    xAxisGen = d3.svg.axis().scale(xScale).orient(&quot;bottom&quot;).tickFormat(d3.time.format(&quot;%m/%d&quot;)).outerTickSize([2]).tickValues(graphDates);
+                                    yAxisGen = d3.svg.axis().scale(yScale).orient(&quot;left&quot;).ticks(4).outerTickSize([2]);
+                                    lineFun = d3.svg.line().x(function (d) {
+                                        return xScale(d.date);
+                                    }).y(function (d) {
+                                        return yScale(d.value);
+                                    }).interpolate(&quot;cardinal&quot;).tension(0.5);
+                                }
+
+                                function drawLineChart() {
+                                    setChartParameters();
+                                    svg.append(&quot;svg:g&quot;).attr(&quot;class&quot;, &quot;x-axis&quot;).attr(&quot;transform&quot;, &quot;translate(0,&quot; + (h - (margin.top)) + &quot;)&quot;).call(xAxisGen);
+                                    svg.append(&quot;svg:g&quot;).attr(&quot;class&quot;, &quot;y-axis&quot;).attr(&quot;transform&quot;, &quot;translate(&quot; + (margin.right) + &quot;,2)&quot;).call(yAxisGen);
+
+                                    var lineTooltip = d3.select(&#039;body&#039;).append(&quot;div&quot;).attr(&quot;id&quot;, &quot;cluster_tooltip&quot;).style(&quot;max-width&quot;, &quot;300px&quot;).style(&quot;padding&quot;, &quot;10px&quot;).style(&quot;background-color&quot;, &quot;rgba(255, 255, 255, 0.7)&quot;).style(&quot;border-radius&quot;, &quot;10px&quot;).style(&quot;box-shadow&quot;, &quot;4px 4px 10px rgba(0, 0, 0, 0.4)&quot;).style(&quot;position&quot;, &quot;absolute&quot;).style(&quot;z-index&quot;, &quot;10&quot;).style(&quot;visibility&quot;, &quot;hidden&quot;);
+
+                                    var tooltip_mouseover = function (d) {
+                                        svg.selectAll(&quot;#tipline&quot;).remove();
+                                        var xPos = parseFloat(d3.select(this).attr(&#039;cx&#039;));
+                                        var yPos = parseFloat(d3.select(this).attr(&#039;cy&#039;));
+                                        var tipLineValues = [
+                                            [
+                                                [xPos, h],
+                                                [xPos, yPos + 5]
+                                            ],
+                                            [
+                                                [margin.left, yPos],
+                                                [xPos - 5, yPos]
+                                            ]
+                                        ];
+                                        svg.append(&quot;g&quot;).attr(&quot;id&quot;, &quot;tipline&quot;).selectAll(&quot;.line-to-axis&quot;).data(tipLineValues).enter().append(&quot;path&quot;).attr(&#039;d&#039;, d3.svg.line().interpolate(&quot;linear&quot;)).attr(&#039;stroke&#039;, &#039;#444&#039;).attr(&#039;stroke-width&#039;, 1).style(&quot;stroke-dasharray&quot;, &quot;4,2&quot;);
+                                        var tooltipText = d.value; //write any html styling you want
+                                        lineTooltip.html(tooltipText);
+                                        return lineTooltip.style(&quot;visibility&quot;, &quot;visible&quot;);
+                                    };
+                                    var tooltip_positioned_mousemove = function () {
+                                        return lineTooltip.style(&quot;top&quot;, (d3.event.pageY - 10) + &quot;px&quot;).style(&quot;left&quot;, (d3.event.pageX + 10) + &quot;px&quot;);
+                                    };
+                                    var tooltip_hide_tooltip = function () {
+                                        return lineTooltip.style(&quot;visibility&quot;, &quot;hidden&quot;);
+                                    };
+
+                                    if (graphVitals.length &gt; 0) {
+                                        svg.append(&quot;svg:path&quot;).attr({
+                                            d: lineFun(graphVitals),
+                                            &quot;stroke&quot;: &quot;#6AA6FF&quot;,
+                                            &quot;stroke-width&quot;: 2,
+                                            &quot;fill&quot;: &quot;none&quot;,
+                                            &quot;class&quot;: pathClass
+                                        });
+                                        svg.selectAll(&quot;dot&quot;).data(graphVitals).enter().append(&quot;circle&quot;).attr(&quot;r&quot;, 4.5).attr(&quot;cx&quot;, function (d) {
+                                                return xScale(d.date);
+                                            }).attr(&quot;cy&quot;, function (d) {
+                                                return yScale(d.value);
+                                            }).on(&quot;mouseover&quot;, tooltip_mouseover)
+                                            .on(&quot;mousemove&quot;, tooltip_positioned_mousemove)
+                                            .on(&quot;mouseout&quot;, tooltip_hide_tooltip);
+
+                                        svg.selectAll(&quot;xtick&quot;).data(graphVitals)
+                                            .enter()
+                                            .append(&quot;rect&quot;)
+                                            .attr(&quot;width&quot;, 2)
+                                            .attr(&quot;height&quot;, 5)
+                                            .attr(&quot;x&quot;, function (d) {
+                                                return xScale(d.date);
+                                            }).attr(&quot;y&quot;, h);
+
+                                        svg.selectAll(&quot;ytick&quot;).data(yAxisValues)
+                                            .enter()
+                                            .append(&quot;rect&quot;)
+                                            .attr(&quot;width&quot;, 5)
+                                            .attr(&quot;height&quot;, 2)
+                                            .attr(&quot;x&quot;, margin.left - 5).attr(&quot;y&quot;, function (d) {
+                                                return yScale(d);
+                                            });
+
+                                    }
+                                    if (graphVitalsTwo.length &gt; 0) {
+                                        svg.append(&quot;svg:path&quot;).attr({
+                                            d: lineFun(graphVitalsTwo),
+                                            &quot;stroke&quot;: &quot;#6AA6FF&quot;,
+                                            &quot;stroke-width&quot;: 2,
+                                            &quot;fill&quot;: &quot;none&quot;,
+                                            &quot;class&quot;: pathClass
+                                        });
+                                        svg.selectAll(&quot;dot&quot;).data(graphVitalsTwo).enter().append(&quot;circle&quot;).attr(&quot;r&quot;, 4.5).attr(&quot;cx&quot;, function (d) {
+                                                return xScale(d.date);
+                                            }).attr(&quot;cy&quot;, function (d) {
+                                                return yScale(d.value);
+                                            }).on(&quot;mouseover&quot;, tooltip_mouseover)
+                                            .on(&quot;mousemove&quot;, tooltip_positioned_mousemove)
+                                            .on(&quot;mouseout&quot;, tooltip_hide_tooltip);
+                                    }
+                                    svg.selectAll(&quot;circle&quot;).style(&#039;fill&#039;, &#039;#fff&#039;).style(&#039;stroke&#039;, &#039;#000&#039;);
+                                }
+                                drawLineChart();
+                            }, 100);
+                        };
+                    });
+                }
+            };
+        }
+    ]);</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

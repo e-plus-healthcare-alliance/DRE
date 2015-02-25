@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - test/unit/test-demo.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>test/unit/test-demo.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">65.36</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">176</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">22.99</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.13</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&quot;use strict&quot;;
+
+/*jshint -W117 */
+// relaxed JSHint to allow use of xit and xdescribe to disable some test cases (make them pending)
+
+var expect = require(&#039;chai&#039;).expect;
+var assert = require(&#039;chai&#039;).assert;
+
+var fs = require(&#039;fs&#039;);
+var bbjs = require(&#039;blue-button&#039;);
+var match = require(&quot;blue-button-match&quot;);
+
+//var match = require(&#039;../lib/match.js&#039;);
+//var compare = require(&#039;../lib/compare-partial.js&#039;).compare;
+//var lookups = require(&#039;../lib/lookups.js&#039;);
+//var equal = require(&#039;deep-equal&#039;);
+
+var js, js2, js3, js4;
+
+var lookup = [
+    &#039;allergies&#039;,
+    &#039;encounters&#039;,
+    &#039;immunizations&#039;,
+    &#039;results&#039;,
+    &#039;medications&#039;,
+    &#039;problems&#039;,
+    &#039;procedures&#039;,
+    &#039;vitals&#039;,
+    &#039;demographics&#039;,
+    &#039;social_history&#039;,
+];
+
+before(function (done) {
+    /*
+        01 - original record (with all sections populated)
+        02 - duplicate
+        03 - all sections updated (e.g. only dups (old) and new (new) matches triggered)
+        04 - all sections updated with data that triggers partial matching (scenario: record comes from different doctor)
+    */
+    var xml = fs.readFileSync(&#039;test/artifacts/demo-r1.0/bluebutton-01-original.xml&#039;).toString();
+    var xml2 = fs.readFileSync(&#039;test/artifacts/demo-r1.0/bluebutton-02-duplicate.xml&#039;).toString();
+    var xml3 = fs.readFileSync(&#039;test/artifacts/demo-r1.0/bluebutton-03-updated.xml&#039;).toString();
+    var xml4 = fs.readFileSync(&#039;test/artifacts/demo-r1.0/bluebutton-04-diff-source-partial-matches.xml&#039;).toString();
+
+    js = bbjs.parseString(xml).data;
+    js2 = bbjs.parseString(xml2).data;
+    js3 = bbjs.parseString(xml3).data;
+    js4 = bbjs.parseString(xml4).data;
+
+    //save JSON into artifacts folder (just for reference and manual inspection)
+    fs.writeFileSync(&#039;test/artifacts/demo-r1.0/json/bluebutton-01-original.json&#039;, JSON.stringify(js, null, 4));
+    fs.writeFileSync(&#039;test/artifacts/demo-r1.0/json/bluebutton-02-duplicate.json&#039;, JSON.stringify(js2, null, 4));
+    fs.writeFileSync(&#039;test/artifacts/demo-r1.0/json/bluebutton-03-updated.json&#039;, JSON.stringify(js3, null, 4));
+    fs.writeFileSync(&#039;test/artifacts/demo-r1.0/json/bluebutton-04-diff-source-partial-matches.json&#039;, JSON.stringify(js4, null, 4));
+
+    //bb4 = bbjs.parseString(xml4).data;
+
+    //console.log(js);
+    done();
+});
+
+xdescribe(&#039;Verifying demo R1.0 sample xml files&#039;, function () {
+
+    it(&#039;checking for all sections present in each demo file&#039;, function () {
+
+        for (var section in lookup) {
+            //console.log(lookup[section]);
+
+            //console.log(&quot; &gt;js&quot;);
+            expect(js[lookup[section]]).to.exist;
+            //console.log(&quot; &gt;js2&quot;);
+            expect(js2[lookup[section]]).to.exist;
+            //console.log(&quot; &gt;js3&quot;);
+            expect(js3[lookup[section]]).to.exist;
+            //console.log(&quot; &gt;js4&quot;);
+            expect(js4[lookup[section]]).to.exist;
+        }
+
+        /*
+            var m = match.match(bb, bb);
+
+            //console.log(JSON.stringify(m,null,4));
+
+            expect(m).to.be.ok;
+            expect(m).to.have.property(&quot;match&quot;);
+
+            for (var section in lookups.sections) {
+                var name = lookups.sections[section];
+                //console.log(&quot;&gt;&gt;&gt; &quot;+name);
+
+                if (bb.hasOwnProperty(name)) {
+
+                    expect(m[&quot;match&quot;]).to.have.property(name);
+
+                    for (var item in m[&quot;match&quot;][name]) {
+                        expect(m[&quot;match&quot;][name][item].match).to.equal(&quot;duplicate&quot;);
+                        expect(m[&quot;match&quot;][name][item]).to.have.property(&#039;src_id&#039;);
+                        expect(m[&quot;match&quot;][name][item]).to.have.property(&#039;dest_id&#039;);
+                    }
+                }
+            }
+            */
+
+    });
+
+    it(&#039;checking that JSON #1 agains empty master record&#039;, function () {
+        //console.log(js);
+        var m0 = match.match(js, {});
+
+        //console.log(JSON.stringify(m,null,4));
+
+        for (var section in lookup) {
+            for (var el in m0.match[lookup[section]]) {
+                expect(m0.match[lookup[section]][el].match).to.equal(&quot;new&quot;);
+            }
+        }
+
+    });
+
+    it(&#039;checking that JSON #1 and #2 are duplicates&#039;, function () {
+        //console.log(js);
+        var m = match.match(js, js2);
+
+        fs.writeFileSync(&#039;test/artifacts/demo-r1.0/matches/02-in-01.json&#039;, JSON.stringify(m, null, 4));
+
+        //console.log(JSON.stringify(m,null,4));
+
+        for (var section in lookup) {
+            for (var el in m.match[lookup[section]]) {
+                expect(m.match[lookup[section]][el].match).to.equal(&quot;duplicate&quot;);
+            }
+        }
+
+    });
+
+    it(&#039;checking that matches between JSON #3 and #1 are just new or duplicates entries&#039;, function () {
+        var m2 = match.match(js3, js);
+
+        fs.writeFileSync(&#039;test/artifacts/demo-r1.0/matches/03-in-01.json&#039;, JSON.stringify(m2, null, 4));
+        //console.log(JSON.stringify(m2,null,4));
+
+        for (var section in lookup) {
+            //console.log(lookup[section]);
+            //console.log(m2.match[lookup[section]]);
+            for (var el in m2.match[lookup[section]]) {
+                expect(m2.match[lookup[section]][el].match).to.not.equal(&quot;partial&quot;);
+                assert.include([&quot;duplicate&quot;, &quot;new&quot;], m2.match[lookup[section]][el].match);
+            }
+        }
+
+    });
+
+    it(&#039;checking that matches between JSON #4 and #3 has partial or diff entries&#039;, function () {
+        var m3 = match.match(js4, js3);
+
+        fs.writeFileSync(&#039;test/artifacts/demo-r1.0/matches/04-in-03.json&#039;, JSON.stringify(m3, null, 4));
+        //console.log(JSON.stringify(m3,null,4));
+
+        for (var section in lookup) {
+            //console.log(lookup[section]);
+            //console.log(m3.match[lookup[section]]);
+            var count = 0;
+            for (var el in m3.match[lookup[section]]) {
+                var mmm = m3.match[lookup[section]][el].match;
+
+                if (mmm === &quot;partial&quot; || mmm === &quot;diff&quot;) {
+                    count = count + 1;
+                }
+                //assert.include([&quot;duplicate&quot;, &quot;new&quot;, &quot;diff&quot;, &quot;partial&quot;],m3.match[lookup[section]][el].match);
+                expect(count &gt; 0).to.be.true;
+            }
+        }
+
+    });
+
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

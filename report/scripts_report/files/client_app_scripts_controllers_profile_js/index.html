@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/controllers/profile.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/controllers/profile.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">67.02</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">255</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">21.71</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.33</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+
+/**
+ * @ngdoc function
+ * @name phrPrototypeApp.controller:ProfileCtrl
+ * @description
+ * # ProfileCtrl
+ * Controller of the phrPrototypeApp
+ */
+angular.module(&#039;phrPrototypeApp&#039;)
+    /*
+    &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+        .controller(&#039;ProfileCtrl&#039;, function($scope, $location, $anchorScroll, account, profile) {
+
+            $scope.navClick = function(element) {
+                var old = $location.hash();
+                $location.hash(element);
+                $anchorScroll();
+                //reset to old to keep any additional routing logic from kicking in
+                $location.hash(old);
+            };
+
+            $scope.updateProfile = function() {
+                var info = $scope.profile;
+                var tmpemail = {
+                    &quot;type&quot;: &quot;primary&quot;,
+                    &quot;email&quot;: $scope.profile.email[0].email
+                };
+
+                $scope.profile.email[0] = tmpemail;
+
+                var formatdob = moment($scope.tmpDOB).format(&#039;YYYY-MM-DDTHH:mmZ&#039;);
+                $scope.profile.dob = {
+                  &quot;date&quot;: formatdob,
+                  &quot;precision&quot;: &quot;day&quot;
+                };
+
+                profile.saveProfile(info, function(err) {
+                    console.log(&#039;profile controller&#039;, info);
+                });
+
+                displayProfile();
+            };
+
+            function displayProfile() {
+                profile.getProfile(function(err, profileInfo) {
+                    $scope.profile = profileInfo;
+                    console.log(&#039;profile controller&#039;, $scope.profile);
+                    //Shims for HL7 weirdness.
+                    if (profileInfo&amp;&amp;profileInfo.dob) {
+                      //special format for profile form
+                        $scope.tmpDOB = moment($scope.profile.dob.date).format(&#039;YYYY-MM-DD&#039;);
+                        console.log($scope.profile.dob, $scope.tmpDOB);
+                    }
+                });
+            }
+
+            displayProfile();
+
+
+    =======
+    */
+    .controller(&#039;ProfileCtrl&#039;, function ($scope, $location, $route, $anchorScroll, account, profile, format) {
+
+        $scope.editAddress = false;
+        $scope.editPhone = false;
+        // $scope.editLangs = false;
+        $scope.editProf = false;
+        // $scope.user_language = {};
+
+        $scope.editAddressSection = function () {
+            $scope.editAddress = true;
+        };
+        $scope.cancelAddressSection = function () {
+            $scope.editAddress = false;
+            $scope.new_address = {};
+            displayProfile();
+        };
+
+        $scope.editPhoneSection = function () {
+            $scope.editPhone = true;
+        };
+        $scope.cancelPhoneSection = function () {
+            $scope.editPhone = false;
+            $scope.new_phone = {};
+            displayProfile();
+        };
+
+        $scope.editProfSection = function () {
+            $scope.editProf = true;
+        };
+        $scope.cancelProf = function () {
+            $scope.editProf = false;
+            displayProfile();
+        };
+
+        // $scope.editLangsSection = function () {
+        //   $scope.editLangs = true;
+        // };
+        // $scope.cancelLangs = function () {
+        //   $scope.editLangs = false;
+        // };
+
+        $scope.navClick = function (element) {
+            var old = $location.hash();
+            $location.hash(element);
+            $anchorScroll();
+            //reset to old to keep any additional routing logic from kicking in
+            $location.hash(old);
+        };
+
+        $scope.updateProfile = function () {
+            // if (angular.isDefined($scope.new_language)) {
+            //   addLang();
+            // }
+            addAddress();
+            addPhone();
+
+            var info = $scope.profile;
+            var tmpemail = {
+                &quot;type&quot;: &quot;primary&quot;,
+                &quot;email&quot;: $scope.profile.email[0].email
+            };
+
+            $scope.profile.email[0] = tmpemail;
+
+            var formatdob = moment($scope.editDOB).format(&#039;YYYY-MM-DD&#039;);
+            $scope.profile.dob = {
+                &quot;point&quot;: {
+                    &quot;date&quot;: formatdob,
+                    &quot;precision&quot;: &quot;day&quot;
+                }
+            };
+            if ($scope.tmpMiddleName) {
+                // var tmpMiddleName = $scope.profile.name.middle;
+                $scope.profile.name.middle = [];
+                $scope.profile.name.middle[0] = $scope.tmpMiddleName;
+            } else {
+                //remove name if it is empty string
+                $scope.profile.name.middle = [];
+                delete $scope.profile.name.middle;
+            }
+
+            // console.log($scope.tmpDOB, $scope.profile.dob);
+            profile.saveProfile(info, function (err) {
+                $route.reload();
+                // displayProfile();
+                // console.log(&#039;profile controller&#039;, info);
+            });
+            $scope.editAddress = false;
+            $scope.editPhone = false;
+            // $scope.editLangs = false;
+            $scope.editProf = false;
+
+        };
+
+        function displayProfile() {
+            profile.getProfile(function (err, profileInfo) {
+                $scope.profile = profileInfo;
+                //console.log(&#039;profile controller&#039;, $scope.profile);
+                //Shims for HL7 weirdness.
+                if (profileInfo &amp;&amp; profileInfo.dob) {
+                    $scope.editDOB = moment($scope.profile.dob.point.date).format(&#039;YYYY-MM-DD&#039;);
+                    $scope.viewDOB = format.formatDate($scope.profile.dob.point);
+                    // console.log($scope.tmpDOB, $scope.tmp1DOB, $scope.profile.dob);
+                    // hard coded language
+
+                    // if (angular.isDefined($scope.profile.languages)) {
+                    // for (var index in $scope.profile.languages) {
+                    //   if ($scope.profile.languages[index].language === &#039;en&#039;) {
+                    //     $scope.user_language[index] = &#039;English&#039;;
+                    //   }
+                    // }
+                    // }
+                }
+                if (profileInfo &amp;&amp; profileInfo.name.middle) {
+                    $scope.tmpMiddleName = profileInfo.name.middle[0];
+                }
+
+            });
+        }
+
+        displayProfile();
+
+        // function addLang() {
+        //     // add new language
+        //     if ($scope.new_language.language === &#039;English&#039;) {
+        //       $scope.new_language.language = &#039;en&#039;;
+        //     }
+        //     var tmpLanguages =
+        //         {&quot;language&quot;: $scope.new_language.language,
+        //         &quot;mode&quot;: $scope.new_language.mode,
+        //         &quot;proficiency&quot;: $scope.new_language.proficiency};
+        //       if (angular.isDefined($scope.profile.languages)) {
+        //         var lang_count = $scope.profile.languages.length;
+        //         // console.log(lang_count);
+        //         $scope.profile.languages[lang_count] = $scope.new_language;
+        //         $scope.profile.new_language = {};
+        //       } else {
+        //         $scope.profile.languages = [];
+        //         $scope.profile.languages[0] = tmpLanguages;
+        //         $scope.profile.new_language = {};
+        //       }
+        //   }
+
+        function addPhone() {
+            if (angular.isDefined($scope.new_phone)) {
+                var tmpPhone = {
+                    &quot;number&quot;: $scope.new_phone.number,
+                    &quot;type&quot;: $scope.new_phone.type
+                };
+                if (angular.isDefined($scope.profile.phone)) {
+                    var phone_count = $scope.profile.phone.length;
+                    $scope.profile.phone[phone_count] = $scope.new_phone;
+                    $scope.new_phone = {};
+                } else {
+                    $scope.profile.phone = [];
+                    $scope.profile.phone[0] = tmpPhone;
+                    //console.log($scope.tmpNewPhone, $scope.new_phone);
+                    $scope.new_phone = {};
+                }
+            }
+        }
+
+        function addAddress() {
+            console.log(&quot;$scope.new_address &quot;, $scope.new_address);
+            if (angular.isDefined($scope.new_address)) {
+                var tmpNewAddress = {
+                    &quot;city&quot;: $scope.new_address.city,
+                    &quot;state&quot;: $scope.new_address.state,
+                    &quot;zip&quot;: $scope.new_address.zip,
+                    &quot;country&quot;: $scope.new_address.country,
+                    &quot;use&quot;: $scope.new_address.use
+                };
+                if ($scope.new_address.street_line1) {
+                    tmpNewAddress.street_lines = [];
+                    tmpNewAddress.street_lines[0] = $scope.new_address.street_line1;
+                }
+
+                if (angular.isDefined($scope.profile.addresses)) {
+                    var addresses_count = $scope.profile.addresses.length;
+                    $scope.profile.addresses[addresses_count] = $scope.new_address;
+                    $scope.new_address = {};
+                } else {
+                    $scope.profile.addresses = [];
+                    $scope.profile.addresses[0] = tmpNewAddress;
+                    //console.log($scope.tmpNewAddress, $scope.new_address);
+                    $scope.new_address = {};
+                }
+
+            }
+
+        }
+
+    });
+
+// &#039;email&#039;: $scope.profile.email[0].email,
+// &#039;firstName&#039;: $scope.profile.name.first,
+// &#039;middleName&#039;: $scope.profile.name.middle[0],
+// &#039;lastName&#039;: $scope.profile.name.last,
+// &#039;dob&#039;: $scope.profile.dob,
+// &#039;gender&#039;: $scope.profile.gender,
+// &#039;race_ethnicity&#039;: $scope.profile.race_ethnicity,
+// &#039;marital_status&#039;: $scope.profile.marital_status,
+// &#039;religion&#039;: $scope.profile.religion,
+// &#039;db_id&#039;: $scope.profile._id,
+// &#039;record_id&#039;: $scope.profile.metadata.attribution[0].record._id
+
+// var info = {
+//   &quot;name&quot;: {
+//       &quot;middle&quot;: [$scope.inputMiddle],
+//       &quot;last&quot;: $scope.inputLast,
+//       &quot;first&quot;: $scope.inputFirst
+//   },
+//   &quot;dob&quot;: $scope.inputDOB,
+//   &quot;gender&quot;: $scope.inputGender,
+//   &quot;email&quot;: [{
+//       &quot;email&quot;: $scope.inputEmail,
+//       &quot;type&quot;: &quot;primary&quot;
+//   }]
+// };</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

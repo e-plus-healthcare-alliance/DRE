@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - lib/record/index.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>lib/record/index.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">73.49</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">175</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">34.76</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.70</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var express = require(&#039;express&#039;);
+var app = module.exports = express();
+var Promise = require(&quot;bluebird&quot;);
+var record = require(&#039;blue-button-record&#039;);
+var bb = require(&#039;blue-button&#039;);
+var _ = require(&#039;underscore&#039;);
+var bbm = require(&#039;blue-button-meta&#039;);
+var fs = require(&#039;fs&#039;);
+var path = require(&#039;path&#039;);
+var login = require(&#039;../login&#039;);
+
+// blue bird to promisify record API
+Promise.promisifyAll(require(&quot;blue-button-record&quot;));
+
+// var historyRecord = require(&#039;blue-button-record&#039;);
+
+var supportedComponents = bbm.supported_sections.reduce(function (r, c) {
+    r[c] = true;
+    return r;
+}, {});
+
+function formatResponse(srcComponent, srcResponse) {
+
+    //console.log(srcResponse);
+
+    var srcReturn = {};
+    //Clean __v tag.
+    for (var ir in srcResponse) {
+        if (srcResponse[ir].__v &gt;= 0) {
+            delete srcResponse[ir].__v;
+        }
+    }
+    srcReturn[srcComponent] = srcResponse;
+    return srcReturn;
+}
+
+app.get(&#039;/api/v1/record/:component&#039;, login.checkAuth, function (req, res) {
+
+    if (!supportedComponents[req.params.component]) {
+        res.status(404).end();
+    } else {
+
+        function sendResponse(componentName) {
+            record.getSection(componentName, req.user.username, function (err, componentList) {
+                if (err) {
+                    res.status(500).end();
+                } else {
+                    var apiResponse = formatResponse(componentName, componentList);
+                    res.send(apiResponse);
+                }
+            });
+        }
+
+        sendResponse(req.params.component);
+    }
+});
+
+// Update demographic information from profile page
+app.post(&#039;/api/v1/record/demographics&#039;, login.checkAuth, function (req, res) {
+    console.log(&quot;posting&quot;, req.user.username, req.body);
+    var db_id = req.body._id;
+    var info = req.body;
+
+    console.log(info, req.user.username, req.body._id, db_id);
+    record.updateEntry(&#039;demographics&#039;, req.user.username, req.body._id, null, info, function (err) {
+        if (err) {
+            throw err;
+            res.status(400).send(err);
+        } else {
+
+            record.saveEvent(&#039;infoUpdate&#039;, req.user.username, &quot;User updated profile details&quot;, null, function (err) {
+                if (err) {
+                    res.status(400).send(&#039;Event error &#039; + err);
+                } else {
+                    console.log(&#039;profile info updated&#039;);
+                    res.status(200).send(&quot;OK&quot;);
+                }
+            });
+
+        }
+    });
+});
+
+// CCDA generation. uses promise-based blue-button-record API
+// (via bluebird module) to combine returned sections, propagating
+// back to caller when done or on error via @callback
+
+function prep(sec, secName) {
+    return secName == &quot;demographics&quot; ? sec[0] : sec;
+}
+
+function getMHR(username, callback) {
+
+    supported_sections = _.difference(bbm.supported_sections, [&quot;plan_of_care&quot;, &quot;providers&quot;]); //, &quot;payers&quot;, &quot;claims&quot;, &quot;insurance&quot;
+
+    var aggregatedResponse = {},
+        count = 0,
+        components = supported_sections;
+
+    supported_sections.forEach(function (secName) {
+        record.getSectionAsync(secName, username).then(function (sec) {
+
+            if (sec.length !== 0) {
+                _.extend(aggregatedResponse, formatResponse(secName, prep(sec, secName)));
+            }
+            if (++count === components.length) {
+                callback(null, aggregatedResponse);
+            }
+        }).catch(function (e) {
+            console.log(e);
+            //temporary error shim, need to investigate.
+            //callback(&quot;Error&quot;);
+        });
+    });
+}
+
+app.get(&#039;/api/v1/master_health_record/:format?&#039;, login.checkAuth, function (req, res) {
+    var format = &quot;xml&quot;;
+    if (req.params.format &amp;&amp; req.params.format === &quot;json&quot;) {
+        format = &quot;json&quot;;
+    }
+
+    getMHR(req.user.username, function (err, result) {
+        //console.log(result);
+
+        if (err) {
+            res.status(500).end();
+        } else {
+            var timestamp = new Date().toISOString();
+            timestamp = timestamp.replace(/-/g, &#039;&#039;).substring(0, 8);
+            userLastName = result.demographics.name.last.toLowerCase();
+            res.setHeader(&#039;Content-disposition&#039;, &#039;attachment; filename=&#039; + &#039;ccda_record-&#039; + userLastName + &#039;-&#039; + timestamp + &#039;.&#039; + format);
+
+            if (format === &quot;json&quot;) {
+                //return BB JSON
+                record.saveEvent(&#039;fileDownloaded&#039;, req.user.username, &quot;User downloaded Master Health Record in JSON format (Blue Button) &#039;ccda_record-&quot; + userLastName + &#039;-&#039; + timestamp + &#039;.&#039; + format + &quot;&#039;&quot;, null, function (err) {
+                    if (err) {
+                        res.status(400).send(&#039;Event error &#039; + err);
+                    }
+                });
+                res.send(JSON.stringify(result, null, 4));
+            } else {
+                //return CCDA
+
+                // console.log(JSON.stringify(result.demographics, null, 10));
+                var response_ccda = bb.generateCCDA(result).toString()
+
+                console.log(&quot;response ccda is generated&quot;);
+
+                //console.log(response_ccda);
+                record.saveEvent(&#039;fileDownloaded&#039;, req.user.username, &quot;User downloaded Master Health Record in CCDA format (Blue Button) &#039;ccda_record-&quot; + userLastName + &#039;-&#039; + timestamp + &#039;.&#039; + format + &quot;&#039;&quot;, null, function (err) {
+                    if (err) {
+                        res.status(400).send(&#039;Event error &#039; + err);
+                    }
+                });
+                res.send(response_ccda);
+            }
+        }
+    });
+});
+
+app.get(&#039;/api/v1/get_record/&#039;, login.checkAuth, function (req, res) {
+
+    getMHR(req.user.username, function (err, result) {
+        //console.log(result);
+
+        if (err) {
+            res.status(500).end();
+        } else {
+
+            res.send(JSON.stringify(result, null, 4));
+
+        }
+    });
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

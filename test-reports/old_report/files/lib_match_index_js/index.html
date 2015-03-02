@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - lib/match/index.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>lib/match/index.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">74.25</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">359</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">24.45</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">2.44</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var express = require(&#039;express&#039;);
+var app = module.exports = express();
+var record = require(&#039;blue-button-record&#039;);
+var _ = require(&#039;underscore&#039;);
+var bbm = require(&#039;blue-button-meta&#039;);
+var dre = require(&#039;../dre/index.js&#039;);
+var storage = require(&#039;../storage/index.js&#039;);
+var async = require(&#039;async&#039;);
+var login = require(&#039;../login&#039;);
+
+function reRunMatches(matchComponent, matchUser, callback) {
+
+    //Select all matches for the patient.
+    //Get MHR.
+    //feed them into DRE.
+    //need to re-attribute new/dupe/partial.
+
+    function rebuildSourceEntries(sourceMatches, sourceRecordUser, sourceRecordSections, callback) {
+
+        async.map(sourceMatches, function (matchEntry, srcCallback) {
+
+            //Re-gather partial entry for completeness.
+            record.getEntry(matchEntry.entry_type, sourceRecordUser, matchEntry.entry._id, function (err, results) {
+                if (err) {
+                    srcCallback(err);
+                } else {
+
+                    var newResult = _.omit(results, [&#039;_id&#039;, &#039;metadata&#039;]);
+                    var returnResult = {
+                        entry: newResult,
+                        record_id: results.metadata.attribution[0].record._id,
+                        partial_id: results._id,
+                        match_id: matchEntry._id,
+                        section: matchEntry.entry_type
+                    }
+
+                    srcCallback(null, returnResult);
+                }
+            });
+        }, function (err, newRecord) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null, newRecord);
+            }
+        });
+    }
+
+    function rebuildMHRRecord(mhrSections, mhrRecordUser, callback) {
+        var masterHealthRecord = {};
+        //Get elements from MHR.
+        async.each(mhrSections, function (section, callback) {
+            record.getSection(section, mhrRecordUser, function (err, mhrEntries) {
+                if (err) {
+                    callback(err);
+                } else {
+                    //console.log(mhrEntries);
+                    masterHealthRecord[section] = mhrEntries;
+                    callback(null);
+                }
+            });
+        }, function (err) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null, masterHealthRecord);
+            }
+        });
+    }
+
+    function updateMatch(matchUserID, matchSection, matchOriginalEntryID, recordOriginalEntryID, matchNewEntries, matchPartialEntries, callback) {
+
+        //console.log(matchSection);
+
+        //Update old match to archived, archives original match as well.
+        record.cancelMatch(matchSection, matchUserID, matchOriginalEntryID, &#039;ignored&#039;, function (err, results) {
+            if (err) {
+                callback(err);
+            } else {
+
+                if (_.isUndefined(matchNewEntries)) {
+                    matchNewEntries = {};
+                }
+
+                if (_.isUndefined(matchPartialEntries)) {
+                    matchPartialEntries = {};
+                }
+
+                storage.saveComponents(matchUserID, matchNewEntries, matchPartialEntries, recordOriginalEntryID, function (err) {
+                    if (err) {
+                        callback(err);
+                    } else {
+                        callback(null);
+                    }
+                });
+
+            }
+        });
+
+        //Pare down partials to only valid entries.
+        /*if (!_.isUndefined(matchPartialEntries)) {
+            if (matchPartialEntries[matchSection].length &gt; 0) {
+
+                //Should just save new entries to db as new match, since old stuff archived off.
+
+                //For each new parital object, no need to save new entry to db, as old match entry should be maintained.
+                //So, should just update partial match to point its entry field to the partial_id, and save it directly to db.
+
+
+            }
+        }*/
+
+        //Then, I will take whatever is in the new Entries, and save those as new records using common entry point.
+
+        //save new match pointing to source record.
+        //discard return entry (since I know it already).
+        //save added matches to db.
+
+        //console.log(matchUserID);
+
+        //callback();
+
+    }
+
+    record.getMatches(matchComponent, matchUser, &quot;&quot;, function (err, matchList) {
+        if (err) {
+            callback(err);
+        } else {
+
+            console.log(matchList);
+
+            //Select elements from partial match for rerun.
+            var reRunSections = _.uniq(_.pluck(matchList, &#039;entry_type&#039;));
+
+            //Generate Source Records for Match.
+            rebuildSourceEntries(matchList, matchUser, reRunSections, function (err, sourceMatchRecords) {
+
+                //Generate MHR Records for Match.
+                rebuildMHRRecord(reRunSections, matchUser, function (err, mhrMatchRecords) {
+
+                    async.mapSeries(sourceMatchRecords, function (matchRecord, callback) {
+
+                        var formattedMatchRecord = {};
+                        formattedMatchRecord[matchRecord.section] = [matchRecord.entry];
+
+                        //console.log(formattedMatchRecord);
+
+                        dre.reconcile(matchUser, formattedMatchRecord, mhrMatchRecords, matchRecord.record_id, function (err, newResults, partialResults) {
+
+                            updateMatch(matchUser, matchRecord.section, matchRecord.match_id, matchRecord.record_id, newResults, partialResults, function (err, results) {
+                                if (err) {
+                                    callback(err);
+                                } else {
+                                    callback(null);
+                                }
+                            });
+                        });
+
+                    }, function (err, results) {
+                        if (err) {
+                            callback(err);
+                        } else {
+                            callback(null);
+                        }
+
+                    });
+
+                });
+
+            });
+        }
+    });
+
+}
+
+function updateMerged(username, updateId, updateComponent, updateIndex, updateParameters, callback) {
+
+    //Gather full match object by ID.
+    record.getMatch(updateComponent, username, updateId, function (err, resultComponent) {
+        if (err) {
+            callback(err);
+        } else {
+
+            //Gather partial record from db.
+
+            record.getEntry(updateComponent, username, resultComponent.entry._id, function (err, recordResults) {
+
+                if (err) {
+                    callback(err);
+                } else {
+
+                    //NOTE:  Only one attribution merge since a partial.
+                    var recordId = recordResults.metadata.attribution[0].record._id;
+
+                    //Update merged entry.
+
+                    record.updateEntry(updateComponent, username, resultComponent.matches[updateIndex].match_entry._id, recordId, updateParameters, function (err, updateResults) {
+                        if (err) {
+                            callback(err);
+                        } else {
+
+                            //Use cancel to update to merged.
+                            record.cancelMatch(updateComponent, username, updateId, &#039;merged&#039;, function (err, results) {
+                                if (err) {
+                                    callback(err);
+                                } else {
+
+                                    //Rerun Matching.
+                                    //reRunMatches(updateComponent, &#039;test&#039;, function (err, results) {
+                                    callback();
+                                    //});
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+}
+
+function processUpdate(username, updateId, updateIndex, updateComponent, updateParameters, callback) {
+
+    //Can be 1) Merged, 2) Added, 3) Ignored.
+
+    //TODO:  ADD RERUN MATCH AFTER ADD AS WELL (AND IGNORE, WHY NOT?).
+
+    if (updateParameters.determination === &#039;added&#039;) {
+        if (updateComponent === &#039;demographics&#039;) {
+            callback(&#039;Only one demographic accepted&#039;);
+        }
+
+        record.acceptMatch(updateComponent, &#039;test&#039;, updateId, &#039;added&#039;, function (err, results) {
+            if (err) {
+                callback(err);
+            } else {
+                //Rerun Matching.
+                reRunMatches(updateComponent, username, function (err, results) {
+                    if (err) {
+                        callback(err);
+                    } else {
+                        callback();
+                    }
+                });
+            }
+        });
+
+    }
+
+    if (updateParameters.determination === &#039;merged&#039;) {
+        //If determination is merged, overwrite original record, drop source object, and update merge history of object.
+        updateMerged(username, updateId, updateComponent, updateIndex, updateParameters.updated_entry, function (err, results) {
+
+            if (err) {
+                callback(err);
+            } else {
+                callback(null);
+            }
+        });
+    }
+
+    if (updateParameters.determination === &#039;ignored&#039;) {
+        record.cancelMatch(updateComponent, username, updateId, &#039;ignored&#039;, function (err, results) {
+            if (err) {
+                callback(err);
+            } else {
+                //Rerun Matching.
+                /* reRunMatches(updateComponent, &#039;test&#039;, function (err, results) {
+                     if (err) {
+                         callback(err);
+                     } else {
+                         callback();
+                     }
+                 });*/
+
+                callback();
+
+            }
+        })
+
+    }
+}
+
+// Get all matches API.
+app.get(&#039;/api/v1/matches/:component&#039;, login.checkAuth, function (req, res) {
+
+    if (_.contains(bbm.supported_sections, req.params.component) === false) {
+        res.send(404);
+    } else {
+        record.getMatches(req.params.component, req.user.username, &#039;performer body_sites findings date_time procedure problem payer_name plan_name payer number product observation code value allergen vital name smoking_statuses encounter result_set results policy ignored_field &quot;&#039;, function (err, matchList) {
+            //record.getMatches(req.params.component, req.user.username, &#039;procedure problem product allergen vital name smoking_statuses encounter result_set results plan_id payer_name payer number plan_name&quot;&#039;, function(err, matchList) {
+            if (err) {
+                console.error(err);
+                res.status(400).end(err);
+            } else {
+                var matchJSON = {};
+                matchJSON.matches = matchList;
+                res.send(matchJSON);
+            }
+        });
+    }
+});
+
+// Get single match API.
+app.get(&#039;/api/v1/match/:component/:record_id&#039;, login.checkAuth, function (req, res) {
+    if (_.contains(bbm.supported_sections, req.params.component) === false) {
+        res.status(404).end();
+    } else {
+        record.getMatch(req.params.component, req.user.username, req.params.record_id, function (err, match) {
+            if (err) {
+                res.status(400).send(err);
+            } else {
+                res.send(match);
+            }
+        });
+    }
+});
+
+//Post partial record updates.
+app.post(&#039;/api/v1/matches/:component/:record_id&#039;, login.checkAuth, function (req, res) {
+
+    if (_.contains(bbm.supported_sections, req.params.component) === false) {
+        res.status(404).end();
+    } else {
+        if (_.contains([&#039;added&#039;, &#039;ignored&#039;], req.body.determination)) {
+            processUpdate(req.user.username, req.params.record_id, null, req.params.component, req.body, function (err) {
+                if (err) {
+                    console.error(err);
+                    res.status(400).send(err);
+                } else {
+                    res.status(200).end();
+                }
+            });
+        } else {
+            res.status(404).end();
+        }
+    }
+});
+
+//Post partial record updates.
+app.post(&#039;/api/v1/matches/:component/:record_id/:record_index&#039;, login.checkAuth, function (req, res) {
+
+    if (_.contains(bbm.supported_sections, req.params.component) === false) {
+        res.status(404).end();
+    } else {
+        if (_.contains([&#039;merged&#039;], req.body.determination)) {
+            processUpdate(req.user.username, req.params.record_id, req.params.record_index, req.params.component, req.body, function (err) {
+                if (err) {
+                    console.error(err);
+                    res.status(400).send(err);
+                } else {
+                    res.status(200).end();
+                }
+            });
+        } else {
+            res.status(404).end();
+        }
+    }
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

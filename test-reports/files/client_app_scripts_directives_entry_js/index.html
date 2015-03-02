@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/directives/entry.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/directives/entry.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">52.86</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">238</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">49.25</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">3.06</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+/**
+ * @ngdoc directive
+ * @name phrPrototypeApp.directive:entry
+ * @description
+ * # entry
+ */
+angular.module(&#039;phrPrototypeApp&#039;)
+    .directive(&#039;entry&#039;, function (format, notes) {
+        return {
+            templateUrl: &#039;views/templates/entry.html&#039;,
+            restrict: &#039;EA&#039;,
+            link: function postLink(scope, element, attrs) {
+                //Attribute Variables.
+                scope.type = attrs.type;
+                scope.entryIndex = attrs.entryIndex;
+                //Scope Inherited Variables.
+                scope.entryData = scope.recordEntry.data;
+                scope.entryMetaData = scope.recordEntry.metadata;
+                //Generated Variables.
+                scope.entryTitle = &quot;&quot;;
+                scope.entrySubTitleOne = &quot;&quot;;
+                scope.entrySubTitleTwo = &quot;&quot;;
+                scope.entryTemplatePath = &quot;views/templates/details/&quot; + scope.type + &quot;.html&quot;;
+
+                //console.log(&quot;SCOPE.TYPE &quot;, scope.type);
+                switch (scope.type) {
+
+                case &#039;allergies&#039;:
+                    if (scope.entryData.observation) {
+                        if (scope.entryData.observation.allergen &amp;&amp; scope.entryData.observation.allergen.name) {
+                            scope.entryTitle = scope.entryData.observation.allergen.name;
+                        }
+                        if (scope.entryData.observation.severity &amp;&amp; scope.entryData.observation.severity.code &amp;&amp; scope.entryData.observation.severity.code.name) {
+                            scope.entrySubTitleOne = scope.entryData.observation.severity.code.name;
+                        }
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;encounters&#039;:
+                    if (scope.entryData.encounter &amp;&amp; scope.entryData.encounter.name) {
+                        scope.entryTitle = scope.entryData.encounter.name;
+                    }
+                    if (scope.entryData.locations &amp;&amp; scope.entryData.locations[0].name) {
+                        scope.entrySubTitleOne = scope.entryData.locations[0].name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;immunizations&#039;:
+                    if (scope.entryData.product &amp;&amp; scope.entryData.product.product &amp;&amp; scope.entryData.product.product.name) {
+                        scope.entryTitle = scope.entryData.product.product.name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;medications&#039;:
+                    if (scope.entryData.product &amp;&amp; scope.entryData.product.product &amp;&amp; scope.entryData.product.product.name) {
+                        scope.entryTitle = scope.entryData.product.product.name;
+                    }
+                    if (scope.entryData.administration &amp;&amp; scope.entryData.administration.route &amp;&amp; scope.entryData.administration.route.name) {
+                        scope.entrySubTitleOne = scope.entryData.administration.route.name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;conditions&#039;:
+                    if (scope.entryData.problem &amp;&amp; scope.entryData.problem.code &amp;&amp; scope.entryData.problem.code.name) {
+                        scope.entryTitle = scope.entryData.problem.code.name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;procedures&#039;:
+                    if (scope.entryData.procedure &amp;&amp; scope.entryData.procedure.name) {
+                        scope.entryTitle = scope.entryData.procedure.name;
+                    }
+                    if (scope.entryData.status) {
+                        scope.entrySubTitleOne = scope.entryData.status;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;vitals&#039;:
+                    var quantityUnit = &quot;&quot;;
+                    if (scope.entryData.unit) {
+                        if (scope.entryData.unit === &quot;[in_i]&quot;) {
+                            quantityUnit = &quot;inches&quot;;
+                        } else if (scope.entryData.unit === &quot;[lb_av]&quot;) {
+                            quantityUnit = &quot;lbs&quot;;
+                        } else if (scope.entryData.unit === &quot;mm[Hg]&quot;) {
+                            quantityUnit = &quot;mm&quot;;
+                        } else {
+                            quantityUnit = scope.entryData.unit;
+                        }
+                        if (scope.entryData.value &amp;&amp; scope.entryData.value + &quot; &quot; + quantityUnit) {
+                            scope.entryTitle = scope.entryData.value + &quot; &quot; + quantityUnit;
+                        }
+                    }
+                    if (scope.entryData.vital &amp;&amp; scope.entryData.vital.name) {
+                        scope.entrySubTitleOne = scope.entryData.vital.name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;results&#039;:
+                    if (scope.entryData.result_set &amp;&amp; scope.entryData.result_set.name) {
+                        scope.entryTitle = scope.entryData.result_set.name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;social&#039;:
+                    if (scope.entryData.value) {
+                        scope.entryTitle = scope.entryData.value;
+                    }
+                    if (scope.entryData.code &amp;&amp; scope.entryData.code.name) {
+                        scope.entrySubTitleOne = scope.entryData.code.name;
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;claims&#039;:
+                    if (scope.entryData.payer[0]) {
+                        scope.entryTitle = scope.entryData.payer[0];
+                    }
+                    if (scope.recordEntry.metadata.displayDate) {
+                        scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                case &#039;insurance&#039;:
+                    //console.log(&quot;INSURANCE&quot;, scope.entryData, scope.recordEntry.metadata);
+                    if (scope.entryData.policy.insurance.performer.organization[0].name[0]) {
+                        //scope.entryTitle = scope.entryData.name;
+                        scope.entryTitle = scope.entryData.policy.insurance.performer.organization[0].name[0];
+                    }
+                    if (scope.entryData.participant.date_time) {
+                        scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                    }
+                    break;
+                }
+
+                function countStarredComments(recordIndex) {
+                    var commentCount = 0;
+                    _.each(scope.entryMetaData.comments, function (comment) {
+                        if (comment.starred) {
+                            commentCount++;
+                        }
+                    });
+                    scope.entryMetaData.starred_comments = commentCount;
+                }
+                countStarredComments();
+                scope.swapTabs = function (entryClass, entryIndex) {
+
+                    if (entryClass === &quot;details&quot;) {
+                        $(&quot;#comments&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#history&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#match&quot; + entryIndex).removeClass(&quot;in&quot;);
+                    } else if (entryClass === &quot;comments&quot;) {
+                        $(&quot;#details&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#history&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#match&quot; + entryIndex).removeClass(&quot;in&quot;);
+                    } else if (entryClass === &quot;history&quot;) {
+                        $(&quot;#details&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#comments&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#match&quot; + entryIndex).removeClass(&quot;in&quot;);
+                    } else if (entryClass === &quot;match&quot;) {
+                        $(&quot;#details&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#comments&quot; + entryIndex).removeClass(&quot;in&quot;);
+                        $(&quot;#history&quot; + entryIndex).removeClass(&quot;in&quot;);
+                    }
+
+                };
+
+                scope.clickStar = function (starVal, starIndex, recordIndex, entry) {
+                    console.log(&quot;click Star &quot;, !starVal, entry);
+
+                    notes.starNote(entry.note_id, !starVal, function (err, data) {
+                        console.log(&#039;err &#039;, err);
+                        console.log(&#039;updated note &#039;, data);
+                    });
+
+                    if (starVal) {
+                        scope.entryMetaData.comments[starIndex].starred = false;
+                    } else {
+                        scope.entryMetaData.comments[starIndex].starred = true;
+                    }
+                    countStarredComments();
+                };
+                scope.newStar = function (starVal, recordIndex) {
+                    if (starVal) {
+                        scope.newComment.starred = false;
+                    } else {
+                        scope.newComment.starred = true;
+                    }
+                };
+                scope.addNote = function () {
+                    console.log(&quot;adding note&quot;);
+                    console.log(scope);
+
+                    scope.newComment.starred = false;
+
+                    scope.newComment.entry = scope.recordEntry.data._id;
+                    scope.newComment.note = scope.newComment.comment;
+                    scope.newComment.section = scope.recordEntry.category;
+
+                    notes.addNote(scope.newComment, function (err, data) {
+                        console.log(&#039;err &#039;, err);
+                        console.log(&#039;data &#039;, data);
+
+                        scope.newComment.entry_id = data.entry;
+                        scope.newComment.note_id = data._id;
+
+                        scope.entryMetaData.comments.push(scope.newComment);
+
+                        countStarredComments();
+
+                        console.log(&quot;scope.newComment&quot;, scope.newComment);
+                        scope.newComment = {};
+
+                    });
+
+                };
+
+                scope.newComment = {};
+            }
+        };
+    });</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - test/e2e/components/demographics.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>test/e2e/components/demographics.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">68.13</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">621</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">61.36</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">7.24</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var expect = require(&#039;chai&#039;).expect;
+var supertest = require(&#039;supertest&#039;);
+var deploymentLocation = &#039;http://&#039; + &#039;localhost&#039; + &#039;:&#039; + &#039;3000&#039;;
+var databaseLocation = &#039;mongodb://&#039; + &#039;localhost&#039; + &#039;/&#039; + &#039;dre&#039;;
+var api = supertest.agent(deploymentLocation);
+var fs = require(&#039;fs&#039;);
+var path = require(&#039;path&#039;);
+var database = require(&#039;mongodb&#039;).Db;
+var common2 = require(&#039;../common.js&#039;);
+
+function removeCollection(inputCollection, callback) {
+    var db;
+    database.connect(databaseLocation, function (err, dbase) {
+        if (err) {
+            throw err;
+        }
+        db = dbase;
+        db.collection(inputCollection, function (err, coll) {
+            if (err) {
+                throw err;
+            }
+            coll.remove({}, function (err, results) {
+                if (err) {
+                    throw err;
+                }
+                db.close();
+                callback();
+            });
+        });
+    });
+}
+
+function loadTestRecord(fileName, callback) {
+    var filepath = path.join(__dirname, &#039;../../artifacts/test-r1.0/&#039; + fileName);
+    api.put(&#039;/api/v1/storage&#039;)
+        .attach(&#039;file&#039;, filepath)
+        .expect(200)
+        .end(function (err, res) {
+            if (err) {
+                callback(err);
+            }
+            callback(null);
+        });
+}
+
+describe(&#039;Pre Test Cleanup&#039;, function () {
+
+    it(&#039;Remove Demographic Collections&#039;, function (done) {
+        removeCollection(&#039;demographics&#039;, function (err) {
+            if (err) {
+                done(err);
+            }
+            removeCollection(&#039;demographicsmerges&#039;, function (err) {
+                if (err) {
+                    done(err);
+                }
+                removeCollection(&#039;demographicsmatches&#039;, function (err) {
+                    if (err) {
+                        done(err);
+                    }
+                    removeCollection(&#039;storage.files&#039;, function (err) {
+                        if (err) {
+                            done(err);
+                        }
+                        removeCollection(&#039;storage.chunks&#039;, function (err) {
+                            if (err) {
+                                done(err);
+                            }
+                            done();
+                        });
+                    });
+                });
+            });
+        });
+    });
+    it(&#039;Login&#039;, function (done) {
+        common2.register(api, &#039;test&#039;, &#039;test&#039;, function () {
+            common2.login(api, &#039;test&#039;, &#039;test&#039;, function () {
+                done();
+            });
+        });
+    });
+});
+
+describe(&#039;Demographic API - Test New:&#039;, function () {
+
+    before(function (done) {
+        loadTestRecord(&#039;bluebutton-01-original.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.demographics, null, 10));
+                expect(res.body.demographics.length).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Match Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                expect(res.body.merges.length).to.equal(1);
+                for (var i in res.body.merges) {
+                    expect(res.body.merges[i].merge_reason).to.equal(&#039;new&#039;);
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;demographics&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                //console.log(JSON.stringify(res.body.merges, null, 10));
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Demographic API - Test Duplicate:&#039;, function () {
+
+    before(function (done) {
+        loadTestRecord(&#039;bluebutton-02-duplicate.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.allergies, null, 10));
+                expect(res.body.demographics.length).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Match Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                expect(res.body.merges.length).to.equal(2);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;demographics&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(1);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+});
+
+//REMOVED:  New/Dupe Mix.  Invalid, as demographics can only by definition have one per record.
+
+describe(&#039;Demographic API - Test Partial Matches:&#039;, function () {
+
+    before(function (done) {
+        loadTestRecord(&#039;bluebutton-04-diff-source-partial-matches.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.demographics, null, 10));
+                expect(res.body.demographics.length).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(res.body.merges);
+                expect(res.body.merges.length).to.equal(2);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;demographics&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(1);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Match Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+
+                //console.log(JSON.stringify(res.body.matches, null, 10));
+
+                expect(res.body.matches.length).to.equal(1);
+                for (var i in res.body.matches) {
+                    expect(res.body.matches[i].entry.name).to.deep.equal(res.body.matches[i].entry.name);
+                    expect(res.body.matches[i].entry_type).to.equal(&#039;demographics&#039;);
+                }
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Demographic API - Test Ignored Matches&#039;, function () {
+
+    var update_id = &#039;&#039;;
+    var match_id = &#039;&#039;;
+
+    it(&#039;Update Demographic Match Records Ignored&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                } else {
+                    update_id = res.body.matches[0]._id;
+                    match_id = res.body.matches[0].entry._id;
+                    api.post(&#039;/api/v1/matches/demographics/&#039; + update_id)
+                        .send({
+                            determination: &quot;ignored&quot;
+                        })
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) {
+                                done(err);
+                            } else {
+                                done();
+                            }
+                        });
+                }
+            });
+    });
+
+    it(&#039;Get Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.demographics.length).to.equal(1);
+                var total_demographics = 0;
+                for (var iEntry in res.body.demographics) {
+                    if (res.body.demographics[iEntry]._id === match_id) {
+                        //console.log(JSON.stringify(res.body.allergies[iEntry], null, 10));
+                        total_demographics++;
+                    }
+                }
+                expect(total_demographics).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Merge Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(res.body.merges);
+                expect(res.body.merges.length).to.equal(2);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;demographics&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(1);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Match Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                }
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Demographic API - Test Merged Matches&#039;, function () {
+
+    before(function (done) {
+        loadTestRecord(&#039;bluebutton-04-diff-source-partial-matches.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    var match_id = &#039;&#039;;
+
+    var base_id = &#039;&#039;;
+    var base_object = {};
+
+    var update_id = &#039;&#039;;
+    var tmp_updated_entry = {
+        &quot;addresses&quot;: [{
+            &quot;city&quot;: &quot;Beaverzone&quot;,
+            &quot;state&quot;: &quot;AL&quot;,
+            &quot;zip&quot;: &quot;97867&quot;,
+            &quot;country&quot;: &quot;US&quot;,
+            &quot;use&quot;: &quot;primary home&quot;,
+            &quot;streetLines&quot;: [
+                &quot;1352 Amber Drive&quot;
+            ]
+        }],
+        &quot;birthplace&quot;: {
+            &quot;city&quot;: &quot;Beaverlandia&quot;,
+            &quot;state&quot;: &quot;AL&quot;,
+            &quot;zip&quot;: &quot;97867&quot;,
+            &quot;country&quot;: &quot;US&quot;,
+            &quot;streetLines&quot;: []
+        },
+        &quot;dob&quot;: [{
+            &quot;date&quot;: &quot;1976-05-01T00:00:00.000Z&quot;,
+            &quot;precision&quot;: &quot;month&quot;
+        }],
+        &quot;email&quot;: [{
+            &quot;address&quot;: &quot;bz@test.com&quot;
+        }],
+        &quot;gender&quot;: &quot;Male&quot;,
+        &quot;guardians&quot;: [{
+            &quot;relation&quot;: &quot;Parent&quot;,
+            &quot;email&quot;: [],
+            &quot;phone&quot;: [{
+                &quot;number&quot;: &quot;(816)276-6909&quot;,
+                &quot;type&quot;: &quot;primary home&quot;
+            }],
+            &quot;names&quot;: [{
+                &quot;last&quot;: &quot;Jones&quot;,
+                &quot;first&quot;: &quot;Ralph&quot;,
+                &quot;middle&quot;: []
+            }],
+            &quot;addresses&quot;: [{
+                &quot;city&quot;: &quot;Beaverton&quot;,
+                &quot;state&quot;: &quot;OR&quot;,
+                &quot;zip&quot;: &quot;97867&quot;,
+                &quot;country&quot;: &quot;US&quot;,
+                &quot;use&quot;: &quot;primary home&quot;,
+                &quot;streetLines&quot;: [
+                    &quot;1357 Amber Drive&quot;
+                ]
+            }]
+        }],
+        &quot;identifiers&quot;: [{
+            &quot;identifier&quot;: &quot;2.16.840.1.113883.19.5.99999.2&quot;,
+            &quot;extension&quot;: &quot;998991&quot;
+        }, {
+            &quot;identifier&quot;: &quot;2.16.840.1.113883.4.1&quot;,
+            &quot;extension&quot;: &quot;111-00-2330&quot;
+        }],
+        &quot;languages&quot;: [{
+            &quot;language&quot;: &quot;fr&quot;,
+            &quot;preferred&quot;: true,
+            &quot;mode&quot;: &quot;Expressed spoken&quot;,
+            &quot;proficiency&quot;: &quot;decent&quot;
+        }],
+        &quot;marital_status&quot;: &quot;Divorced&quot;,
+        &quot;name&quot;: {
+            &quot;last&quot;: &quot;Jones&quot;,
+            &quot;first&quot;: &quot;Isabella&quot;,
+            &quot;middle&quot;: [
+                &quot;Isa&quot;
+            ]
+        },
+        &quot;phone&quot;: [{
+            &quot;number&quot;: &quot;(816)276-6909&quot;,
+            &quot;type&quot;: &quot;primary home&quot;
+        }, {
+            &quot;number&quot;: &quot;(813)276-6909&quot;,
+            &quot;type&quot;: &quot;primary work&quot;
+        }],
+        &quot;race_ethnicity&quot;: &quot;White&quot;,
+        &quot;religion&quot;: &quot;Christian (non-Catholic, non-specific)&quot;
+    };
+
+    it(&#039;Update Demographic Match Records Merged&#039;, function (done) {
+
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                } else {
+                    //console.log(JSON.stringify(res.body.matches, null, 10));
+                    base_id = res.body.matches[0].matches[0].match_entry._id;
+                    update_id = res.body.matches[0]._id;
+                    match_id = res.body.matches[0].entry._id;
+                    //Still need this object to check metadata.
+                    api.get(&#039;/api/v1/record/demographics&#039;)
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) {
+                                done(err);
+                            } else {
+                                for (var i = 0; i &lt; res.body.demographics.length; i++) {
+                                    if (res.body.demographics[i]._id === base_id) {
+                                        base_object = res.body.demographics[i];
+                                    }
+                                }
+                                api.post(&#039;/api/v1/matches/demographics/&#039; + update_id + &#039;/0&#039;)
+                                    .send({
+                                        determination: &quot;merged&quot;,
+                                        updated_entry: tmp_updated_entry
+                                    })
+                                    .expect(200)
+                                    .end(function (err, res) {
+                                        if (err) {
+                                            done(err);
+                                        } else {
+                                            done();
+                                        }
+                                    });
+                            }
+                        });
+                }
+            });
+    });
+
+    it(&#039;Get Demographic Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.demographics.length).to.equal(1);
+                var total_demographics = 0;
+                for (var iEntry in res.body.demographics) {
+                    if (res.body.demographics[iEntry]._id === match_id) {
+                        total_demographics++;
+                    }
+                    if (res.body.demographics[iEntry]._id === base_id) {
+
+                        //console.log(res.body.demographics[iEntry]);
+                        //console.log(tmp_updated_entry);
+
+                        //SHIM in empty arrays.
+                        if (res.body.demographics[iEntry].birthplace.streetLines === undefined) {
+                            res.body.demographics[iEntry].birthplace.streetLines = [];
+                        }
+                        if (res.body.demographics[iEntry].email === undefined) {
+                            res.body.demographics[iEntry].email = [];
+                        }
+
+                        for (var iGuard in res.body.demographics[iEntry].guardians) {
+                            if (res.body.demographics[iEntry].guardians[iGuard].email === undefined) {
+                                res.body.demographics[iEntry].guardians[iGuard].email = [];
+                            }
+                            for (var iName in res.body.demographics[iEntry].guardians[iGuard].names) {
+                                if (res.body.demographics[iEntry].guardians[iGuard].names[iName].middle === undefined) {
+                                    res.body.demographics[iEntry].guardians[iGuard].names[iName].middle = [];
+                                }
+                            }
+                        }
+
+                        //Test each component.
+                        expect(res.body.demographics[iEntry].addresses).to.deep.equal(tmp_updated_entry.addresses);
+                        expect(res.body.demographics[iEntry].birthplace).to.deep.equal(tmp_updated_entry.birthplace);
+                        expect(res.body.demographics[iEntry].dob).to.deep.equal(tmp_updated_entry.dob);
+                        expect(res.body.demographics[iEntry].email).to.deep.equal(tmp_updated_entry.email);
+                        expect(res.body.demographics[iEntry].gender).to.deep.equal(tmp_updated_entry.gender);
+                        expect(res.body.demographics[iEntry].guardians).to.deep.equal(tmp_updated_entry.guardians);
+                        expect(res.body.demographics[iEntry].identifiers).to.deep.equal(tmp_updated_entry.identifiers);
+                        expect(res.body.demographics[iEntry].languages).to.deep.equal(tmp_updated_entry.languages);
+                        expect(res.body.demographics[iEntry].marital_status).to.deep.equal(tmp_updated_entry.marital_status);
+                        expect(res.body.demographics[iEntry].name).to.deep.equal(tmp_updated_entry.name);
+                        expect(res.body.demographics[iEntry].phone).to.deep.equal(tmp_updated_entry.phone);
+                        expect(res.body.demographics[iEntry].race_ethnicity).to.deep.equal(tmp_updated_entry.race_ethnicity);
+                        expect(res.body.demographics[iEntry].religion).to.deep.equal(tmp_updated_entry.religion);
+                        //Metadata slightly different test.
+                        expect(res.body.demographics[iEntry].metadata.attribution.length).to.equal(base_object.metadata.attribution.length + 1);
+
+                    }
+                }
+                expect(total_demographics).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Merge Records Post Merged&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.merges,null, 10));
+                expect(res.body.merges.length).to.equal(3);
+                var newCnt = 0;
+                var dupCnt = 0;
+                var mrgCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;update&#039;) {
+                        //Get record id off loaded rec, 
+                        expect(res.body.merges[i].entry._id).to.equal(base_id);
+                        expect(res.body.merges[i].record.filename).to.equal(&#039;bluebutton-04-diff-source-partial-matches.xml&#039;);
+                        mrgCnt++;
+                    }
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(1);
+                expect(dupCnt).to.equal(1);
+                expect(mrgCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Demographic Match Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/demographics&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                }
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

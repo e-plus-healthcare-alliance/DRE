@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - lib/dre/index.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>lib/dre/index.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.42</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">440</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">25.12</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.52</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var express = require(&#039;express&#039;);
+var app = module.exports = express();
+var record = require(&#039;blue-button-record&#039;);
+var bbMatch = require(&quot;blue-button-match&quot;);
+var _ = require(&quot;underscore&quot;);
+var async = require(&quot;async&quot;);
+
+//refactored reconciliation functions
+var demographics = require(&#039;./demographics&#039;);
+var dedup_new = require(&#039;./dedup_new&#039;);
+var remove_dups = require(&#039;./remove_dups&#039;);
+
+//Main function, performs match and dedupes.
+
+function reconcile(username, newObject, baseObject, newRecordID, callback) {
+    //HACKETY HACK, skipping reconciliation for now
+    //callback(null, null, null);
+
+    newObjectForParsing = newObject;
+
+    var baseObjectForParsing = {};
+    for (var iObj in baseObject) {
+        baseObjectForParsing[iObj] = {};
+        baseObjectForParsing[iObj] = record.cleanSection(baseObject[iObj]);
+
+        if (baseObjectForParsing[iObj] === undefined) {
+            delete baseObjectForParsing[iObj];
+        }
+    }
+
+    demographics.prepDemographics(baseObjectForParsing, newObjectForParsing);
+
+    baseObjectForParsing = {}.data = baseObjectForParsing;
+    newObjectForParsing = {}.data = newObjectForParsing;
+
+    //console.log(JSON.stringify(newObjectForParsing.social_history, null, 10));
+    //console.log(&#039;------------------&#039;);
+    //console.log(JSON.stringify(baseObjectForParsing.social_history, null, 10));
+    var matchResult = bbMatch.match(newObjectForParsing, baseObjectForParsing);
+    //console.log(JSON.stringify(matchResult.match.social_history, null, 10));
+
+    delete baseObjectForParsing.data;
+    delete newObjectForParsing.data;
+
+    function removeSourceMatches(match) {
+
+        var returnMatch = {};
+
+        _.map(match, function (value, matchKey) {
+
+            if (matchKey !== &#039;demographics&#039;) {
+                var nonSourceMatch = _.filter(match[matchKey], function (object, objectIndex) {
+                    if (object.dest === &#039;src&#039;) {
+                        return false;
+                    } else {
+                        return true;
+                    }
+                });
+                returnMatch[matchKey] = nonSourceMatch;
+            } else {
+                //No need to filter atomic items.
+                returnMatch[matchKey] = value;
+            }
+
+        });
+
+        var returnObject = {
+            match: returnMatch
+        };
+
+        return returnObject;
+
+    }
+
+    //duplicate matches must be purges from queue as well as entries!!!!
+
+    function splitNewPartialEntries(match, newObjectArray, originalNewObjectArray, baseObjectArray) {
+
+        var outputPartialObjectArray = {};
+        var outputNewObjectArray = {};
+
+        //console.log(match);
+
+        _.map(match, function (value, matchKey) {
+
+            outputPartialObjectArray[matchKey] = [];
+            outputNewObjectArray[matchKey] = [];
+
+            //Need to make sure all entries per src_id are only new.
+            newCheckArray = _.where(value, {
+                dest: &#039;dest&#039;
+            });
+
+            if (matchKey === &#039;demographics&#039;) {
+
+                if (match[matchKey].match === &#039;new&#039;) {
+                    outputNewObjectArray[matchKey] = newObjectArray[matchKey];
+                } else if (match[matchKey].match === &#039;partial&#039;) {
+
+                    //console.log(baseObjectArray)
+
+                    var partialOutput = {
+                        partial_entry: newObjectArray[matchKey][0],
+                        partial_match: match[matchKey],
+                        match_entry_id: baseObjectArray[matchKey][0]._id
+                    };
+
+                    var multiPartialOutput = {
+                        partial_entry: newObjectArray[matchKey][0],
+                        partial_matches: [{
+                            match_entry: baseObjectArray[matchKey][0]._id,
+                            match_object: match[matchKey]
+                        }]
+                    }
+
+                    //console.log(JSON.stringify(multiPartialOutput, null, 10));
+
+                    //outputPartialObjectArray[matchKey].push(partialOutput);
+                    outputPartialObjectArray[matchKey].push(multiPartialOutput);
+                }
+
+            } else {
+
+                //If there are no dest records, everything is new.
+                if (newCheckArray.length === 0) {
+
+                    if (newObjectArray[matchKey] === undefined) {
+                        outputNewObjectArray[matchKey] = [];
+                    } else {
+                        outputNewObjectArray[matchKey] = newObjectArray[matchKey];
+                    }
+                }
+
+                var groupCheckedArray = _.groupBy(newCheckArray, &#039;src_id&#039;);
+
+                //if (matchKey === &#039;social_history&#039;) {
+                //    console.log(groupCheckedArray);    
+                //}
+
+                _.each(groupCheckedArray, function (element, index) {
+                    var newElementArray = _.filter(element, function (elementItem, elementItemIndex) {
+                        if (elementItem.match === &#039;new&#039;) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    });
+
+                    //Only valid entries (src_id) will have equal lengths
+                    //Everything else is a partial match as that is all that remains.
+
+                    //console.log(newElementArray.length);
+                    //console.log(element.length);
+
+                    if (newElementArray.length !== element.length) {
+                        //console.log(newObjectArray[matchKey]);
+                        if (newObjectArray[matchKey] !== undefined) {
+                            var partialEntry = newObjectArray[matchKey][index];
+
+                            //Need to pare down element object to just partial match entries.
+                            //For each partial, grab the associated target entry and source entry.
+                            //Return a big list of all matches.
+                            //This will result in too many partial source entries being persisted.
+                            //Must modify save logic to account for this.
+
+                            //console.log(element);
+
+                            var partialElementArray = _.filter(element, function (elementItem, elementItemIndex) {
+                                if (elementItem.match === &#039;partial&#039;) {
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            });
+
+                            //console.log(matchKey);
+
+                            if (matchKey === &#039;procedures&#039;) {
+                                //console.log(partialElementArray);
+                            }
+
+                            var multiPartialOutput = {
+                                partial_entry: partialEntry,
+                                partial_matches: []
+                            };
+
+                            //console.log(partialElementArray.length);
+
+                            _.each(partialElementArray, function (partialElement, partialIndex) {
+
+                                if (matchKey === &#039;social_history&#039;) {
+                                    //console.log(partialElementArray);
+                                }
+
+                                //---Dying between lines.
+                                var partialOutput = {
+                                    partial_entry: partialEntry,
+                                    partial_match: partialElement,
+                                    match_entry_id: baseObjectArray[matchKey][partialElement.dest_id]._id
+                                };
+                                //outputPartialObjectArray[matchKey].push(partialOutput);
+                                //---
+
+                                var multiPartialMatch = {
+                                    match_entry: baseObjectArray[matchKey][partialElement.dest_id]._id,
+                                    match_object: partialElement
+                                }
+
+                                multiPartialOutput.partial_matches.push(multiPartialMatch);
+
+                            });
+
+                            //console.log(JSON.stringify(multiPartialOutput, null, 10));
+                            outputPartialObjectArray[matchKey].push(multiPartialOutput);
+
+                        }
+                    } else {
+                        if (newObjectArray[matchKey] !== undefined) {
+
+                            var outputNewEntry = originalNewObjectArray[matchKey][element[0].src_id];
+                            outputNewObjectArray[matchKey].push(outputNewEntry);
+                        }
+                    }
+
+                });
+
+            }
+
+        });
+
+        //console.log(outputNewObjectArray);
+        //console.log(match.allergies);
+        //console.log(&#039;---------&#039;);
+        //console.log(partialObjectArray);
+        //console.log(&#039;---------&#039;);
+        //console.log(JSON.stringify(outputPartialObjectArray.social_history, null, 10));
+
+        var returnObject = {
+            newEntries: outputNewObjectArray,
+            partialEntries: outputPartialObjectArray
+        }
+
+        //Weird gap here.
+        //console.log(JSON.stringify(returnObject, null, 10));
+        //console.log(returnObject);
+
+        return returnObject;
+
+    }
+
+    demographics.revertDemographics(newObjectForParsing);
+
+    //Remove Overlapping Source Matches.
+    var deDuplicatedSourceRecords = dedup_new.deDuplicateNew(matchResult.match, newObject);
+
+    //Remove All &#039;src&#039; matches.  Currently not required.
+    var nonSourceMatches = removeSourceMatches(deDuplicatedSourceRecords.match);
+    //console.log(JSON.stringify(nonSourceMatches, null, 10));
+
+    //Remove Duplicates from save, update Record Entry.
+
+    var deDuplicatedNewRecord = remove_dups.removeDuplicates(username, nonSourceMatches.match, deDuplicatedSourceRecords.new_entries, baseObject, newRecordID);
+    //console.log(JSON.stringify(deDuplicatedNewRecord.new_match, null, 10));
+
+    //Split incoming entries into new/partial.
+    var splitIncomingEntries = splitNewPartialEntries(deDuplicatedNewRecord.new_match, deDuplicatedNewRecord.new_record, deDuplicatedSourceRecords.new_entries, baseObject);
+
+    //console.log(splitIncomingEntries);
+
+    //console.log(JSON.stringify(splitIncomingEntries));
+
+    //console.log(JSON.stringify(splitIncomingEntries.partialEntries, null, 10));
+
+    //var partialReturnObject = decoratePartial
+
+    //console.log(JSON.stringify(entriesForSave, null, 10));
+
+    callback(null, splitIncomingEntries.newEntries, splitIncomingEntries.partialEntries);
+
+    //console.log(match);
+
+    //removeMatchDuplicates(newObjectForParsing, baseObject, matchResult, newSourceID, function(err, newObjectPostMatch, newPartialObjectPostMatch) {
+    //console.log(JSON.stringify(newObjectPostMatch, null, 10));
+    //    callback(null, newObjectPostMatch, newPartialObjectPostMatch);
+    // });
+
+    /*
+    function removeMatchDuplicates(newObject, baseObject, matchResults, newSourceID, callback) {
+
+    function removeMatches(srcMatches, srcArray, baseArray, section, callback) {
+
+        var returnArray = [];
+        var returnPartialArray = [];
+
+        function updateDuplicate(section, update_id, callback) {
+            record.duplicateEntry(section, &#039;test&#039;, update_id, newSourceID, function (err) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null);
+                }
+            });
+        }
+
+        var loopCount = 0;
+        var loopTotal = srcMatches.length;
+
+        function checkLoopComplete() {
+
+            if (loopCount === loopTotal) {
+                callback(null, section, returnArray, returnPartialArray);
+            }
+        }
+
+        for (var i = 0; i &lt; srcMatches.length; i++) {
+
+            if (srcMatches[i].match === &#039;duplicate&#039;) {
+
+                //If duplicate, don&#039;t push to save array and make duplicate entry in log.
+                var matchIndex = srcMatches[i].dest_id || 0;
+                updateDuplicate(section, baseArray[matchIndex]._id, function (err, resIter) {
+                    if (err) {
+                        console.error(err);
+                    } else {
+                        loopCount++;
+                        checkLoopComplete();
+                    }
+                });
+
+            } else if (srcMatches[i].match === &#039;new&#039;) {
+
+                //If new, push the object to the return.
+
+                var tmpSrcIndex = 0;
+                if (srcMatches[i].src_id === undefined) {} else {
+                    tmpSrcIndex = srcMatches[i].src_id;
+                }
+
+                returnArray.push(srcArray[tmpSrcIndex]);
+
+                loopCount++;
+                checkLoopComplete();
+
+            } else if (srcMatches[i].match === &#039;diff&#039;) {
+
+                //SHIM:  Holder for &#039;New&#039; Demographics fix.
+                var tmpMatchRecId;
+                if (baseArray.length === 0) {
+                    tmpMatchRecId = null;
+                } else {
+                    tmpMatchRecId = baseArray[0]._id;
+                }
+
+                var matchObject = srcMatches[i];
+                var matchObjForDb = {};
+                matchObjForDb.diff = matchObject.diff;
+                if (matchObject.subelements) {
+                    matchObjForDb.subelements = matchObject.subelements;
+                }
+
+                //Diffs always zero, can take only array object.
+                returnPartialArray.push({
+                    partial_entry: srcArray[0],
+                    partial_match: matchObjForDb,
+                    match_entry_id: tmpMatchRecId
+                });
+
+                loopCount++;
+                checkLoopComplete();
+
+            } else if (srcMatches[i].match === &#039;partial&#039;) {
+
+                var matchObject = srcMatches[i];
+                var matchObjForDb = {};
+                matchObjForDb.diff = matchObject.diff;
+                matchObjForDb.percent = matchObject.percent;
+                if (matchObject.subelements) {
+                    matchObjForDb.subelements = matchObject.subelements;
+                }
+
+                returnPartialArray.push({
+                    partial_entry: srcArray[srcMatches[i].src_id],
+                    partial_match: matchObjForDb,
+                    match_entry_id: baseArray[srcMatches[i].dest_id]._id
+                });
+
+                loopCount++;
+                checkLoopComplete();
+            }
+        }
+
+    }
+
+    //Loop all sections.
+    var sectionIter = 0;
+    var sectionTotal = 0;
+    for (var iSecCnt in newObject) {
+        sectionTotal++;
+
+    }
+
+    var newPartialObject = {};
+
+    function checkSectionLoopComplete(iteration, totalSections) {
+        if (iteration === (sectionTotal)) {
+            //console.log(&#039;newObject&#039;);
+            //console.log(newObject);
+            callback(null, newObject, newPartialObject);
+        }
+    }
+
+    for (var iSec in newObject) {
+
+        //console.log(JSON.stringify(newObject[iSec], null, 10));
+
+        var currentMatchResult = matchResults.match[iSec];
+        if (currentMatchResult.length &gt; 0) {
+            removeMatches(currentMatchResult, newObject[iSec], baseObject[iSec], iSec, function (err, returnSection, newEntries, newPartialEntries) {
+                //New entries is fine...
+                //console.log(&#039;newEntries&#039;);
+                //console.log(newEntries);
+                newObject[returnSection] = newEntries;
+                if (newPartialEntries.length &gt; 0) {
+                    newPartialObject[returnSection] = {};
+                    newPartialObject[returnSection] = newPartialEntries;
+                }
+                sectionIter++;
+                checkSectionLoopComplete(sectionIter, sectionTotal);
+            });
+        } else {
+            sectionIter++;
+            checkSectionLoopComplete(sectionIter, sectionTotal);
+        }
+    }
+}
+*/
+
+}
+
+module.exports.reconcile = reconcile;</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

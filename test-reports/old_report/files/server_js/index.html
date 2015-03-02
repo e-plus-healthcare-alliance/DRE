@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - server.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>server.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">65.54</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">248</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">24.29</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">2.06</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">/*=======================================================================
+Copyright 2013 Amida Technology Solutions (http://amida-tech.com)
+
+Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+======================================================================*/
+
+var express = require(&#039;express&#039;);
+var flash = require(&#039;connect-flash&#039;);
+var fs = require(&#039;fs&#039;);
+var http = require(&#039;http&#039;);
+var path = require(&#039;path&#039;);
+var app = express();
+
+var record = require(&#039;blue-button-record&#039;);
+
+var passport = require(&#039;passport&#039;);
+
+var favicon = require(&#039;serve-favicon&#039;);
+var logger = require(&#039;morgan&#039;);
+var multiparty = require(&#039;connect-multiparty&#039;);
+var methodOverride = require(&#039;method-override&#039;);
+var session = require(&#039;express-session&#039;);
+var bodyParser = require(&#039;body-parser&#039;);
+//var multer = require(&#039;multer&#039;);
+//var errorHandler = require(&#039;errorhandler&#039;);
+var cookieParser = require(&#039;cookie-parser&#039;);
+var static = require(&#039;serve-static&#039;);
+
+//app.use(express3.bodyParser());
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+app.use(bodyParser.json({
+    &#039;strict&#039;: false
+}));
+
+//Adding CORS for Swagger UI
+app.use(function (req, res, next) {
+    res.header(&quot;Access-Control-Allow-Origin&quot;, &quot;*&quot;);
+    res.header(&quot;Access-Control-Allow-Credentials&quot;, true);
+    res.header(&quot;Access-Control-Allow-Headers&quot;, &quot;Origin, X-Requested-With, Content-Type, Accept, Authorization&quot;);
+    res.header(&quot;Access-Control-Allow-Methods&quot;, &quot;GET, POST, PUT&quot;);
+    next();
+});
+
+//to prevent caching of API calls
+app.disable(&#039;etag&#039;);
+
+app.use(&#039;/docs&#039;, express.static(&#039;./swagger&#039;));
+
+
+app.use(logger(&#039;dev&#039;));
+app.use(methodOverride());
+app.use(cookieParser());
+app.use(&#039;/api/v1/storage&#039;, multiparty());
+
+var redisStore = require(&#039;connect-redis&#039;)(session); //uncomment for Redis session support during development
+
+//to run fully built UI use this line (run &quot;grunt build&quot; in /client first)
+//app.set(&#039;client_location&#039;, path.resolve(__dirname, &#039;./client/dist&#039;));
+
+//to run development version of UI use this line
+app.set(&#039;client_location&#039;, path.resolve(__dirname, &#039;./client/app&#039;));
+
+//app.set(&#039;client_location&#039;, path.resolve(__dirname, &#039;../phr-prototype/dist&#039;));
+
+//app.use(express.favicon(config.client.location + &#039;/favicon.ico&#039;));
+app.use(express.static(app.get(&#039;client_location&#039;)));
+app.use(function (req, res, next) {
+    var requestPath = &#039;&#039;;
+    if (req.path.substring(req.path.length - 1) === &#039;/&#039;) {
+        requestPath = req.path.substring(0, req.path.length - 1);
+    } else {
+        requestPath = req.path;
+    }
+    var viewPath = app.get(&#039;client_location&#039;) + requestPath + &#039;.html&#039;;
+    fs.exists(viewPath, function (exists) {
+        //console.log(viewPath);
+        if (exists) {
+            res.header(&quot;Strict-Transport-Security&quot;, &quot;max-age=31536000; includeSubDomains&quot;);
+            res.render(viewPath);
+        } else {
+            next();
+        }
+    });
+});
+
+/*      Porting notes from express 3: Item 1 was what it was before, 2s are
+        equivalent versions from previous express 3 versions */
+//     1) app.use(express.bodyParser());
+//     2)app.use(connect.json());
+//     2)app.use(connect.urlencoded());
+//     2)app.use(connect.multipart());
+
+//app.use(express.session({ secret: &#039;keyboard cat&#039;, key: &#039;sid&#039;, cookie: { secure: true }}));
+app.use(session({
+    secret: &#039;keyboard cat&#039;,
+    resave: true,
+    saveUninitialized: true,
+    store: new redisStore({
+            host: &#039;127.0.0.1&#039;,
+            port: 6379,
+            prefix: &#039;chs-sess&#039;
+        }) //uncomment for Redis session support during development
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(flash());
+
+//Initialize Database Connection.
+//var databaseServer = process.env.DB || &#039;mongodb://localhost:27017&#039;;
+//var databaseServer = process.env.DB || &#039;localhost:27017&#039;;
+
+app.set(&#039;db_url&#039;, process.env.DB || &#039;localhost:27017&#039;);
+app.set(&#039;db_name&#039;, &#039;dre&#039;);
+
+console.log(&quot;DB URL: &quot;, app.get(&#039;db_url&#039;));
+
+var storage = require(&#039;./lib/storage&#039;);
+app.use(storage);
+
+var parser = require(&#039;./lib/parser&#039;);
+app.use(parser);
+
+var healthRecord = require(&#039;./lib/record&#039;);
+app.use(healthRecord);
+
+var merges = require(&#039;./lib/merge&#039;);
+app.use(merges);
+
+var match = require(&#039;./lib/match&#039;);
+app.use(match);
+
+var notification = require(&#039;./lib/notification&#039;);
+app.use(notification);
+
+var login = require(&#039;./lib/login&#039;);
+app.use(login);
+
+var account = require(&#039;./lib/account&#039;);
+app.use(account);
+
+var accountHistory = require(&#039;./lib/account-history&#039;);
+app.use(accountHistory);
+
+var notes = require(&#039;./lib/notes&#039;);
+app.use(notes);
+
+app.set(&#039;port&#039;, (process.env.PORT || 3000));
+
+app.set(&#039;mllp_host&#039;, (process.env.PORT || &#039;127.0.0.1&#039;));
+app.set(&#039;mllp_port&#039;, (process.env.PORT || 6969));
+
+//Launch Application.
+record.connectDatabase(app.get(&#039;db_url&#039;), function (err) {
+    console.log(app.get(&#039;db_url&#039;));
+    if (err) {
+        console.log(&quot;DB error&quot;);
+        console.log(err);
+    } else {
+        app.listen(app.get(&#039;port&#039;), &#039;0.0.0.0&#039;);
+        console.log(&quot;Server listening on port &quot; + app.get(&#039;port&#039;));
+    }
+});
+
+//Launch MLLP server/listener
+var mllp = require(&#039;mllp-node&#039;);
+
+var server = new mllp.MLLPServer(&#039;127.0.0.1&#039;, 6969);
+console.log(&quot;MLLP listening on host &quot; + app.get(&#039;mllp_host&#039;) + &quot;, port &quot; + app.get(&#039;mllp_port&#039;));
+
+server.on(&#039;hl7&#039;, function (data) {
+    //console.log(&quot;just an example&quot;, data);
+    //mime type: application/edi-hl7
+
+    var record_metadata = {
+        &#039;type&#039;: &#039;application/edi-hl7&#039;,
+        &#039;name&#039;: &#039;labs.hl7&#039;,
+        &#039;size&#039;: data.length
+    };
+    var record_data = data;
+
+    var hl7 = require(&#039;hl7&#039;);
+
+    var hl7_record = hl7.parseString(record_data);
+
+    //console.log(&quot;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&quot;, hl7_record);
+
+    var tr = require(&#039;blue-button-hl7&#039;);
+
+    var parsed_record = tr.translate(record_data);
+
+    //extract name of sending facility to add to file metadata
+    try {
+        record_metadata.source = hl7_record[0][6][0][0];
+    } catch (ex) {
+        console.log(&quot;HL7 message doesn&#039;t include sending facility name&quot;);
+    }
+
+    //console.log(&quot;parsed HL7 data&quot;, JSON.stringify(parsed_record, null, 4));
+
+    //call PIM from BB-record to get candidates
+    var ptInfo = parsed_record.demographics; //patient ignored for now, return list of all patients in DB
+
+    //console.log(JSON.stringify({
+    //    &quot;data&quot;: ptInfo
+    //}, null, 4));
+
+    record.getCandidates({
+        &quot;data&quot;: ptInfo
+    }, function (smth, docs) {
+        //PIM call here based on candidates
+        //console.log(&quot;candidates&quot;, JSON.stringify(docs, null, 4));
+
+        var username;
+        //assign patient=test for now
+        username = &#039;&#039;;
+
+        //parsed_record - incoming data from HL7
+        //docs - list of candidates fetched from Mongo
+
+        var pim = require(&#039;blue-button-pim&#039;);
+
+        //var configs = require(&#039;configs&#039;)
+
+        //console.log(JSON.stringify({
+        //    data: parsed_record.demographics
+        //}, null, 4));
+
+        var match = pim.compare_candidates(parsed_record.demographics, docs);
+
+        console.log(match);
+
+        //extract username from list of candidates
+        for (var i = 0; i &lt; match.length; i++) {
+            if (match[i].match === &quot;automatic&quot;) {
+                username = match[i].pat_key;
+                console.log(&quot;patient matched to &quot;, username);
+            }
+        }
+
+        if (username !== &quot;&quot;) {
+            //import HL7 data into patient record based on identified username
+            storage.importHL7Record(username, record_metadata, record_data, parsed_record, function () {
+                console.log(&quot;hl7 message saved&quot;);
+            });
+        } else {
+            console.log(&quot;patient match not found&quot;);
+        }
+
+    });
+
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

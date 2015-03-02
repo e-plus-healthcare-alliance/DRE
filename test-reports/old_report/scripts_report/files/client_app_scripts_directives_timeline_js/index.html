@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/directives/timeline.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/directives/timeline.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">68.57</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">312</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">36.35</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">3.56</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+/**
+ * @ngdoc directive
+ * @name phrPrototypeApp.directive:timeline
+ * @Takes two inputs, chartData and chartType.
+ * # timeline
+ */
+angular.module(&#039;phrPrototypeApp&#039;).directive(&#039;timeline&#039;, function ($window, $location, $anchorScroll, d3Service) {
+    return {
+        restrict: &#039;EA&#039;,
+        template: &quot;&lt;svg style=&#039;width:100%;&#039;&gt;&lt;/svg&gt;&quot;,
+        link: function postLink(scope, element, attrs) {
+
+            var navClick = function (ele) {
+                $location.hash(ele);
+                // call $anchorScroll()
+                $anchorScroll();
+            };
+            var plotHeight = 60;
+            var boundaryOffset = 15;
+            var boundaryWidth = 3;
+            var boundaryLabelOffset = 30;
+            var boundaryLabelPadding = 5;
+            var plotBaseColor = &quot;#6AA6FF&quot;;
+            var plotCircles = [];
+            var plotDomain = [];
+            var timeScale;
+            var timeScaleTicks = [];
+            var d3 = $window.d3;
+            var rawSvg = element.find(&quot;svg&quot;)[0];
+            var svg = d3.select(rawSvg).attr(&quot;height&quot;, plotHeight);
+            var format = d3.time.format(&quot;%m/%d/%Y&quot;);
+            var isoFormat = d3.time.format(&quot;%Y-%m-%dT%H:%M:%SZ&quot;);
+            var isoFormatSubsecond = d3.time.format(&quot;%Y-%m-%dT%H:%M:%S.%LZ&quot;);
+            var tip = d3.tip();
+            tip.attr(&#039;class&#039;, &#039;d3-tip&#039;).html(function (d) {
+                return &#039;Entry&#039;;
+            });
+            svg.call(tip);
+
+            function gatherData() {
+                console.log(&quot;timeline gather data&quot;);
+                //Clean variables (needed for refresh).
+                var dataToPlot = [];
+                plotCircles = [];
+                plotDomain = [];
+                dataToPlot = scope[attrs.chartData];
+                var dataType = attrs.chartType;
+                var tmpDomain = [];
+                var minDate, maxDate, plotFloor, plotCeiling;
+                if (dataType === &#039;account&#039; &amp;&amp; dataToPlot) { //&amp;&amp; dataToPlot if no data skip this part
+                    console.log(&#039;&gt;&gt;&gt;plotting account history&#039;);
+                    console.log(&quot;num of points &quot;, dataToPlot.length);
+                    //console.log(&#039;in timeline plotting&#039;);
+                    //console.log(&#039;plot data exists&#039;, dataToPlot);
+                    for (var i in dataToPlot.recordHistory) {
+                        var plotDate = isoFormatSubsecond.parse(dataToPlot.recordHistory[i].date);
+                        //console.log(&#039;plot date&#039;, plotDate);
+                        plotCircles.push({
+                            &quot;date&quot;: plotDate
+                        });
+                        tmpDomain.push(plotDate);
+                    }
+                    minDate = d3.min(tmpDomain);
+                    maxDate = d3.max(tmpDomain);
+                    plotFloor = d3.time.month.floor(d3.time.month.offset(minDate, -2));
+                    plotCeiling = d3.time.month.floor(d3.time.month.offset(maxDate, 2));
+                    plotDomain = [plotFloor, plotCeiling];
+                } else if (dataType === &#039;merges&#039; &amp;&amp; dataToPlot) {
+                    console.log(&#039;&gt;&gt;&gt;plotting merges&#039;);
+                    console.log(&quot;num of points &quot;, dataToPlot.length);
+                    _.each(dataToPlot, function (entry) {
+                        var plotDate;
+                        if (entry.merged) {
+                            plotDate = isoFormat.parse(entry.merged);
+                            //Redundancy for isoFormat subsecond support.
+                            if (_.isNull(plotDate)) {
+                                plotDate = isoFormatSubsecond.parse(entry.merged);
+                            }
+                            plotCircles.push({
+                                &quot;date&quot;: plotDate
+                            });
+                            tmpDomain.push(plotDate);
+                        }
+                    });
+                    minDate = d3.min(tmpDomain);
+                    maxDate = d3.max(tmpDomain);
+                    plotFloor = d3.time.month.floor(d3.time.month.offset(minDate, -2));
+                    plotCeiling = d3.time.month.floor(d3.time.month.offset(maxDate, 2));
+                    plotDomain = [plotFloor, plotCeiling];
+
+                } else {
+                    console.log(&#039;&gt;&gt;&gt;plotting something else&#039;);
+                    console.log(&quot;num of points &quot;, dataToPlot.length);
+
+                    _.each(dataToPlot, function (entry) {
+                        var plotDate;
+                        if (entry.metadata.datetime) {
+                            if (entry.metadata.datetime[0]) {
+                                plotDate = isoFormat.parse(entry.metadata.datetime[0].date);
+
+                            }
+                            //Redundancy for isoFormat subsecond support.
+                            if (_.isNull(plotDate)) {
+                                plotDate = isoFormatSubsecond.parse(entry.metadata.datetime[0].date);
+                            }
+                            plotCircles.push({
+                                &quot;date&quot;: plotDate
+                            });
+                            tmpDomain.push(plotDate);
+                        }
+                    });
+                    minDate = d3.min(tmpDomain);
+                    maxDate = d3.max(tmpDomain);
+                    plotFloor = d3.time.month.floor(d3.time.month.offset(minDate, -2));
+                    plotCeiling = d3.time.month.floor(d3.time.month.offset(maxDate, 2));
+                    plotDomain = [plotFloor, plotCeiling];
+                }
+            }
+
+            function renderPlot() {
+                    console.log(&quot;timeline render plot&quot;);
+
+                    var width = 0;
+
+                    function getSVGWidth() {
+                        width = parseInt(svg.style(&#039;width&#039;), 10);
+
+                        //Shim, keeps it from erroring on first pass.
+                        if (width === 0) {
+                            width = $window.innerWidth * 0.67;
+                        }
+
+                    }
+
+                    function buildScale() {
+                        timeScale = d3.time.scale().range([(boundaryOffset + (boundaryWidth / 2)), width - (boundaryOffset - (boundaryWidth / 2))]).domain(plotDomain);
+                    }
+
+                    function buildTicks() {
+                        timeScaleTicks = [];
+                        //TODO:  Configure this for monthly ticks.
+                        var tmpTimeScaleTicks = timeScale.ticks(20);
+                        for (var i in tmpTimeScaleTicks) {
+                            timeScaleTicks.push({
+                                &quot;x_axis&quot;: timeScale(tmpTimeScaleTicks[i]),
+                                &quot;y_axis&quot;: (plotHeight - boundaryLabelOffset - boundaryLabelPadding) / 2
+                            });
+                        }
+                    }
+
+                    function structureData() {
+                        for (var i in plotCircles) {
+                            plotCircles[i].x_axis = timeScale(plotCircles[i].date);
+                            plotCircles[i].y_axis = (plotHeight - boundaryLabelOffset - boundaryLabelPadding) / 2;
+                            plotCircles[i].radius = 10;
+                            plotCircles[i].color = plotBaseColor;
+                            plotCircles[i].href = &quot;entry&quot; + i;
+                        }
+                    }
+
+                    function plotData() {
+                        svg.selectAll(&#039;*&#039;).remove();
+                        var boundaryData = [{
+                            &quot;x&quot;: boundaryOffset,
+                            &quot;y&quot;: 0,
+                            &quot;width&quot;: boundaryWidth,
+                            &quot;height&quot;: plotHeight - boundaryLabelOffset - boundaryLabelPadding,
+                            &quot;color&quot;: plotBaseColor
+                        }, {
+                            &quot;x&quot;: width - boundaryOffset,
+                            &quot;y&quot;: 0,
+                            &quot;width&quot;: boundaryWidth,
+                            &quot;height&quot;: plotHeight - boundaryLabelOffset - boundaryLabelPadding,
+                            &quot;color&quot;: plotBaseColor
+                        }];
+                        var plotLineData = [{
+                            &quot;x&quot;: boundaryOffset,
+                            &quot;y&quot;: ((plotHeight - boundaryLabelOffset - boundaryLabelPadding) / 2) - 1,
+                            &quot;width&quot;: width - boundaryOffset - boundaryOffset,
+                            &quot;height&quot;: 3,
+                            &quot;color&quot;: plotBaseColor
+                        }];
+                        var boundaryDisplayFormat = d3.time.format(&quot;%b %Y&quot;);
+                        var boundaryLabel = [{
+                            &quot;x&quot;: 0,
+                            &quot;y&quot;: plotHeight - boundaryLabelPadding,
+                            &quot;anchor&quot;: &quot;start&quot;,
+                            &quot;text&quot;: boundaryDisplayFormat(plotDomain[0])
+                        }, {
+                            &quot;x&quot;: width,
+                            &quot;y&quot;: plotHeight - boundaryLabelPadding,
+                            &quot;anchor&quot;: &quot;end&quot;,
+                            &quot;text&quot;: boundaryDisplayFormat(plotDomain[1])
+                        }];
+                        var boundaryLabels = svg.selectAll(&quot;text&quot;).data(boundaryLabel).enter().append(&quot;text&quot;);
+                        var boundaryLabelAttributes = boundaryLabels.attr(&quot;x&quot;, function (d) {
+                            return d.x;
+                        }).attr(&quot;y&quot;, function (d) {
+                            return d.y;
+                        }).text(function (d) {
+                            return d.text;
+                        }).style(&quot;text-anchor&quot;, function (d) {
+                            return d.anchor;
+                        });
+                        var boundaries = svg.selectAll(&quot;plotBoundary&quot;).data(boundaryData).enter().append(&quot;rect&quot;);
+                        var boundaryAttributes = boundaries.attr(&quot;x&quot;, function (d) {
+                            return d.x;
+                        }).attr(&quot;y&quot;, function (d) {
+                            return d.y;
+                        }).attr(&quot;width&quot;, function (d) {
+                            return d.width;
+                        }).attr(&quot;height&quot;, function (d) {
+                            return d.height;
+                        }).style(&quot;fill&quot;, function (d) {
+                            return d.color;
+                        });
+                        var plotLine = svg.selectAll(&quot;plotLine&quot;).data(plotLineData).enter().append(&quot;rect&quot;);
+                        var plotLineAttributes = plotLine.attr(&quot;x&quot;, function (d) {
+                            return d.x;
+                        }).attr(&quot;y&quot;, function (d) {
+                            return d.y;
+                        }).attr(&quot;width&quot;, function (d) {
+                            return d.width;
+                        }).attr(&quot;height&quot;, function (d) {
+                            return d.height;
+                        }).style(&quot;fill&quot;, function (d) {
+                            return d.color;
+                        });
+                        /*var plotLines = svg.selectAll(&quot;plotLines&quot;).data(timeScaleTicks).enter().append(&quot;circle&quot;);
+                        var plotLineAttributes = plotLines
+                            .attr(&quot;cx&quot;, function (d) {
+                                //console.log(d);
+                                return d.x_axis;
+                            })
+                            .attr(&quot;cy&quot;, function (d) {
+                                return d.y_axis;
+                            })
+                            .attr(&quot;r&quot;, 2)
+                            .style(&quot;fill&quot;, &quot;#5bc0de&quot;)
+                            .attr(&quot;class&quot;, &quot;plotLines&quot;);*/
+                        var circles = svg.selectAll(&quot;plotPoint&quot;).data(plotCircles).enter().append(&quot;circle&quot;);
+                        var circleAttributes = circles.attr(&quot;cx&quot;, function (d) {
+                            return d.x_axis;
+                        }).attr(&quot;cy&quot;, function (d) {
+                            return d.y_axis;
+                        }).attr(&quot;r&quot;, function (d) {
+                            return d.radius;
+                        }).attr(&quot;class&quot;, &quot;plotPoint&quot;).on(&#039;mouseover&#039;, function (d) {
+                            var tipFormat = d3.time.format(&quot;%m/%d/%Y&quot;);
+                            tip.attr(&#039;class&#039;, &#039;d3-tip animate&#039;).html(function (d) {
+                                return &#039;&lt;span&gt;&#039; + tipFormat(d.date) + &#039;&lt;/span&gt;&#039;;
+                            }).show(d);
+                        }).on(&#039;mouseout&#039;, function (d) {
+                            tip.attr(&#039;class&#039;, &#039;d3-tip&#039;).show(d);
+                            tip.hide();
+                        });
+                        /*.on(&quot;click&quot;, function(d) {
+                                                    navClick(d.href);
+                                                });*/
+                    }
+                    getSVGWidth();
+                    buildScale();
+                    buildTicks();
+                    structureData();
+                    plotData();
+                }
+                //gatherData only on first run.
+            $window.onload = function () {
+                console.log(&#039;onload&#039;);
+                gatherData();
+                renderPlot();
+            };
+
+            //Re-evaluate scope on resize.
+            $window.onresize = function () {
+                scope.$apply();
+                renderPlot();
+            };
+            //Expose function on master scope.
+
+            scope.$watch(&#039;inactiveFlag&#039;, function (newValue, oldValue) {
+                console.log(&#039;inactive flag &#039; + newValue + &#039; &#039; + oldValue);
+                gatherData();
+                renderPlot();
+            }, true);
+            scope.$watch(&#039;entryType&#039;, function (newValue, oldValue) {
+                console.log(&#039;entry type &#039; + newValue + &#039; &#039; + oldValue);
+                gatherData();
+                renderPlot();
+            }, true);
+            scope.$watch(&#039;pageLoaded&#039;, function (newValue, oldValue) {
+                console.log(&#039;page loaded &#039; + newValue + &#039; &#039; + oldValue);
+                gatherData();
+                renderPlot();
+            }, true);
+
+            /*
+            //Bind to updates in accountHistory var
+            scope.$watch(&#039;accountHistory&#039;, function(newValue, oldValue) {
+                console.log(&#039;acct history &#039;+newValue+&#039; &#039;+oldValue);
+                if (newValue) {
+                    //console.log(&quot;act hist new val &quot;, newValue);
+                    gatherData();
+                    renderPlot();
+                }
+            }, true);
+            */
+
+        }
+    };
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

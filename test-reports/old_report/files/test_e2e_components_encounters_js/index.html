@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - test/e2e/components/encounters.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>test/e2e/components/encounters.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">68.53</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">681</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">79.63</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">8.03</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var expect = require(&#039;chai&#039;).expect;
+var supertest = require(&#039;supertest&#039;);
+var deploymentLocation = &#039;http://&#039; + &#039;localhost&#039; + &#039;:&#039; + &#039;3000&#039;;
+var databaseLocation = &#039;mongodb://&#039; + &#039;localhost&#039; + &#039;/&#039; + &#039;dre&#039;;
+var api = supertest.agent(deploymentLocation);
+var fs = require(&#039;fs&#039;);
+var path = require(&#039;path&#039;);
+var database = require(&#039;mongodb&#039;).Db;
+
+var common = require(path.join(__dirname, &#039;../../common/common.js&#039;));
+var common2 = require(&#039;../common.js&#039;);
+
+describe(&#039;Pre Test Cleanup&#039;, function () {
+
+    it(&#039;Clean Database&#039;, function (done) {
+        common.removeAll(function (err, results) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+    it(&#039;Login&#039;, function (done) {
+        common2.register(api, &#039;test&#039;, &#039;test&#039;, function () {
+            common2.login(api, &#039;test&#039;, &#039;test&#039;, function () {
+                done();
+            });
+        });
+    });
+});
+
+describe(&#039;Encounters API - Test New:&#039;, function () {
+
+    it(&#039;load sample&#039;, function (done) {
+        common.loadTestRecord(api, &#039;bluebutton-01-original.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Encounter Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.encounters, null, 10));
+                expect(res.body.encounters.length).to.equal(1);
+
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                expect(res.body.merges.length).to.equal(1);
+                for (var i in res.body.merges) {
+                    expect(res.body.merges[i].merge_reason).to.equal(&#039;new&#039;);
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;encounters&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                //console.log(JSON.stringify(res.body.merges, null, 10));
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Encounters API - Test Duplicate:&#039;, function () {
+
+    it(&#039;load sample&#039;, function (done) {
+        common.loadTestRecord(api, &#039;bluebutton-02-duplicate.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Encounter Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.allergies, null, 10));
+                expect(res.body.encounters.length).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                expect(res.body.merges.length).to.equal(2);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;encounters&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(1);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Encounters API - Test New/Dupe Mix:&#039;, function () {
+
+    it(&#039;load sample&#039;, function (done) {
+        common.loadTestRecord(api, &#039;bluebutton-03-updated.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Encounters Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.encounters, null, 10));
+                expect(res.body.encounters.length).to.equal(4);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(res.body.merges);
+                expect(res.body.merges.length).to.equal(5);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;encounters&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(4);
+                expect(dupCnt).to.equal(1);
+                //console.log(JSON.stringify(res.body.merges, null, 10));
+                done();
+            });
+    });
+});
+
+describe(&#039;Encounters API - Test Partial Matches:&#039;, function () {
+
+    before(function (done) {
+        common.loadTestRecord(api, &#039;bluebutton-04-diff-source-partial-matches.xml&#039;, function (err) {
+            if (err) {
+                done(err);
+            } else {
+                done();
+            }
+        });
+    });
+
+    it(&#039;Get Encounter Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.allergies, null, 10));
+                expect(res.body.encounters.length).to.equal(4);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(res.body.merges);
+                expect(res.body.merges.length).to.equal(5);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;encounters&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(4);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                //console.log(JSON.stringify(res.body.matches, null, 10));
+                expect(res.body.matches.length).to.equal(3);
+                for (var i in res.body.matches) {
+                    expect(res.body.matches[i].entry.name).to.equal(res.body.matches[i].entry.name);
+                    expect(res.body.matches[i].entry_type).to.equal(&#039;encounters&#039;);
+                }
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Encounters API - Test Added Matches&#039;, function () {
+
+    var update_id = &#039;&#039;;
+    var match_id = &#039;&#039;;
+
+    it(&#039;Update Encounter Match Records&#039;, function (done) {
+
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                } else {
+                    update_id = res.body.matches[0]._id;
+                    match_id = res.body.matches[0].entry._id;
+                    api.post(&#039;/api/v1/matches/encounters/&#039; + update_id)
+                        .send({
+                            determination: &quot;added&quot;
+                        })
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) {
+                                done(err);
+                            } else {
+                                expect(res.body).to.be.empty;
+                                done();
+                            }
+                        });
+                }
+            });
+    });
+
+    it(&#039;Get Encounter Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.encounters.length).to.equal(5);
+                var total_encounters = 0;
+                for (var iEntry in res.body.encounters) {
+                    if (res.body.encounters[iEntry]._id === match_id) {
+                        //console.log(JSON.stringify(res.body.allergies[iEntry], null, 10));
+                        total_encounters++;
+                    }
+                }
+                expect(total_encounters).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(res.body.merges);
+                expect(res.body.merges.length).to.equal(6);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;encounters&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(5);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                }
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.matches.length).to.equal(2);
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Encounters API - Test Ignored Matches&#039;, function () {
+
+    var update_id = &#039;&#039;;
+    var match_id = &#039;&#039;;
+
+    it(&#039;Update Encounter Match Records Ignored&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                } else {
+                    update_id = res.body.matches[0]._id;
+                    match_id = res.body.matches[0].entry._id;
+                    api.post(&#039;/api/v1/matches/encounters/&#039; + update_id)
+                        .send({
+                            determination: &quot;ignored&quot;
+                        })
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) {
+                                done(err);
+                            } else {
+                                done();
+                            }
+                        });
+                }
+            });
+    });
+
+    it(&#039;Get Encounter Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.encounters.length).to.equal(5);
+                var total_encounters = 0;
+                for (var iEntry in res.body.encounters) {
+                    if (res.body.encounters[iEntry]._id === match_id) {
+                        //console.log(JSON.stringify(res.body.allergies[iEntry], null, 10));
+                        total_encounters++;
+                    }
+                }
+                expect(total_encounters).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(res.body.merges);
+                expect(res.body.merges.length).to.equal(6);
+                var newCnt = 0;
+                var dupCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    expect(res.body.merges[i].entry_type).to.equal(&#039;encounters&#039;);
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(5);
+                expect(dupCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                }
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.matches.length).to.equal(1);
+                done();
+            });
+    });
+
+});
+
+describe(&#039;Encounters API - Test Merged Matches&#039;, function () {
+
+    var match_id = &#039;&#039;;
+
+    var base_id = &#039;&#039;;
+    var base_object = {};
+
+    var update_id = &#039;&#039;;
+    var tmp_updated_entry = {
+        &quot;encounter&quot;: {
+            &quot;code&quot;: &quot;99213&quot;,
+            &quot;code_system_name&quot;: &quot;ICD&quot;,
+            &quot;name&quot;: &quot;Office outpatient visit 30 minutes&quot;,
+            &quot;translations&quot;: [{
+                &quot;name&quot;: &quot;Ambulatory&quot;,
+                &quot;code&quot;: &quot;AMB&quot;,
+                &quot;code_system_name&quot;: &quot;HL7ActCode&quot;
+            }]
+        },
+        &quot;date&quot;: [{
+            &quot;date&quot;: &quot;2009-02-24T00:00:00.000Z&quot;,
+            &quot;precision&quot;: &quot;month&quot;,
+        }],
+        &quot;findings&quot;: [{
+            &quot;name&quot;: &quot;Hepatitis&quot;,
+            &quot;code&quot;: &quot;233604007&quot;,
+            &quot;code_system_name&quot;: &quot;SNOMED CT&quot;,
+            &quot;translations&quot;: []
+        }],
+        &quot;identifiers&quot;: [{
+            &quot;identifier&quot;: &quot;2a620155-9d11-439e-92b3-5d9815ff4de8&quot;
+        }],
+        &quot;locations&quot;: [{
+            &quot;name&quot;: &quot;Community Urgent Care Zone&quot;,
+            &quot;phones&quot;: [],
+            &quot;addresses&quot;: [{
+                &quot;city&quot;: &quot;Blue Bell&quot;,
+                &quot;state&quot;: &quot;MA&quot;,
+                &quot;zip&quot;: &quot;02368&quot;,
+                &quot;country&quot;: &quot;US&quot;,
+                &quot;streetLines&quot;: [
+                    &quot;17 Daws Rd.&quot;
+                ]
+            }],
+            &quot;loc_type&quot;: {
+                &quot;name&quot;: &quot;Urgent Care Center&quot;,
+                &quot;code&quot;: &quot;1160-1&quot;,
+                &quot;code_system_name&quot;: &quot;HealthcareServiceLocation&quot;,
+                &quot;translations&quot;: []
+            }
+        }],
+        &quot;performers&quot;: []
+    };
+
+    it(&#039;Update Encounter Match Records Merged&#039;, function (done) {
+
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                } else {
+                    //console.log(JSON.stringify(res.body.matches, null, 10));
+                    base_id = res.body.matches[0].matches[0].match_entry._id;
+                    update_id = res.body.matches[0]._id;
+                    match_id = res.body.matches[0].entry._id;
+                    //Still need this object to check metadata.
+                    api.get(&#039;/api/v1/record/encounters&#039;)
+                        .expect(200)
+                        .end(function (err, res) {
+                            if (err) {
+                                done(err);
+                            } else {
+                                for (var i = 0; i &lt; res.body.encounters.length; i++) {
+                                    if (res.body.encounters[i]._id === base_id) {
+                                        base_object = res.body.encounters[i];
+                                    }
+                                }
+                                api.post(&#039;/api/v1/matches/encounters/&#039; + update_id + &#039;/0&#039;)
+                                    .send({
+                                        determination: &quot;merged&quot;,
+                                        updated_entry: tmp_updated_entry
+                                    })
+                                    .expect(200)
+                                    .end(function (err, res) {
+                                        if (err) {
+                                            done(err);
+                                        } else {
+                                            done();
+                                        }
+                                    });
+                            }
+                        });
+                }
+            });
+    });
+
+    it(&#039;Get Encounter Records&#039;, function (done) {
+        api.get(&#039;/api/v1/record/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.encounters.length).to.equal(5);
+                var total_encounters = 0;
+                for (var iEntry in res.body.encounters) {
+                    if (res.body.encounters[iEntry]._id === match_id) {
+                        total_encounters++;
+                    }
+                    if (res.body.encounters[iEntry]._id === base_id) {
+
+                        //console.log(res.body.encounters[iEntry]);
+                        //console.log(tmp_updated_entry);
+
+                        //SHIM in empty arrays.
+                        for (var iFind in res.body.encounters[iEntry].findings) {
+                            if (res.body.encounters[iEntry].findings[iFind].translations === undefined) {
+                                res.body.encounters[iEntry].findings[iFind].translations = [];
+                            }
+                        }
+
+                        for (var iLoc in res.body.encounters[iEntry].locations) {
+                            if (res.body.encounters[iEntry].locations[iLoc].phones === undefined) {
+                                res.body.encounters[iEntry].locations[iLoc].phones = [];
+                            }
+                            if (res.body.encounters[iEntry].locations[iLoc].loc_type.translations === undefined) {
+                                res.body.encounters[iEntry].locations[iLoc].loc_type.translations = [];
+                            }
+                        }
+
+                        if (res.body.encounters[iEntry].performers === undefined) {
+                            res.body.encounters[iEntry].performers = [];
+                        }
+
+                        if (res.body.encounters[iEntry].translations === undefined) {
+                            res.body.encounters[iEntry].translations = [];
+                        }
+
+                        //Test each component.
+                        expect(res.body.encounters[iEntry].encounter.code).to.deep.equal(tmp_updated_entry.encounter.code);
+                        expect(res.body.encounters[iEntry].encounter.code_system).to.deep.equal(tmp_updated_entry.encounter.code_system);
+                        expect(res.body.encounters[iEntry].date).to.deep.equal(tmp_updated_entry.date);
+                        expect(res.body.encounters[iEntry].findings).to.deep.equal(tmp_updated_entry.findings);
+                        expect(res.body.encounters[iEntry].identifiers).to.deep.equal(tmp_updated_entry.identifiers);
+                        expect(res.body.encounters[iEntry].locations).to.deep.equal(tmp_updated_entry.locations);
+                        expect(res.body.encounters[iEntry].encounter.name).to.deep.equal(tmp_updated_entry.encounter.name);
+                        expect(res.body.encounters[iEntry].performers).to.deep.equal(tmp_updated_entry.performers);
+                        expect(res.body.encounters[iEntry].encounter.translations).to.deep.equal(tmp_updated_entry.encounter.translations);
+                        //Metadata slightly different test.
+                        expect(res.body.encounters[iEntry].metadata.attribution.length).to.equal(base_object.metadata.attribution.length + 1);
+
+                    }
+                }
+                expect(total_encounters).to.equal(0);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Merge Records Post Merged&#039;, function (done) {
+        api.get(&#039;/api/v1/merges/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    return done(err);
+                }
+                //console.log(JSON.stringify(res.body.merges,null, 10));
+                expect(res.body.merges.length).to.equal(7);
+                var newCnt = 0;
+                var dupCnt = 0;
+                var mrgCnt = 0;
+                for (var i in res.body.merges) {
+                    if (res.body.merges[i].merge_reason === &#039;new&#039;) {
+                        newCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;duplicate&#039;) {
+                        dupCnt++;
+                    }
+                    if (res.body.merges[i].merge_reason === &#039;update&#039;) {
+                        //Get record id off loaded rec, 
+                        expect(res.body.merges[i].entry._id).to.equal(base_id);
+                        expect(res.body.merges[i].record.filename).to.equal(&#039;bluebutton-04-diff-source-partial-matches.xml&#039;);
+                        mrgCnt++;
+                    }
+                    expect(res.body.merges[i].record).to.exist;
+                    expect(res.body.merges[i].record._id).to.exist;
+                    expect(res.body.merges[i].entry._id).to.exist;
+                }
+                expect(newCnt).to.equal(5);
+                expect(dupCnt).to.equal(1);
+                expect(mrgCnt).to.equal(1);
+                done();
+            });
+    });
+
+    it(&#039;Get Encounter Match Records Post Added&#039;, function (done) {
+        api.get(&#039;/api/v1/matches/encounters&#039;)
+            .expect(200)
+            .end(function (err, res) {
+                if (err) {
+                    done(err);
+                }
+                //console.log(JSON.stringify(res.body, null, 10));
+                expect(res.body.matches.length).to.equal(0);
+                done();
+            });
+    });
+
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,16 +1,18 @@
-module.exports = function (grunt) {
+module.exports = function(grunt) {
 
     grunt.loadNpmTasks('grunt-mocha-test');
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks('grunt-express-server');
     grunt.loadNpmTasks('grunt-jsbeautifier');
+    grunt.loadNpmTasks('grunt-plato');
 
     grunt.registerTask('default', ['jshint', 'express:dev', 'mochaTest']);
     grunt.registerTask('dev', ['jshint', 'jsbeautifier']);
+    grunt.registerTask('stats', 'plato');
 
     // Print a timestamp (useful for when watching)
-    grunt.registerTask('timestamp', function () {
+    grunt.registerTask('timestamp', function() {
         grunt.log.subhead(Date());
     });
 
@@ -77,6 +79,27 @@ module.exports = function (grunt) {
                     timeout: '10000'
                 },
                 src: ['test/unit/*.js', 'test/e2e/**/*.js', 'test/e2e/*.js']
+            }
+        },
+        plato: {
+            stats: {
+                files: {
+                    'test-reports': [
+                        'client/app/scripts/*.js',
+                        'client/app/scripts/controllers/**/*.js',
+                        'client/app/scripts/controllers/*.js',
+                        'client/app/scripts/directives/*.js',
+                        'client/app/scripts/services/*.js',
+                        'client/app/scripts/services/**/*.js',
+                        'client/app/scripts/filters/*.js',
+                        'test/e2e/*.js',
+                        'test/e2e/**/*.js',
+                        'test/common/*.js',
+                        'test/unit/*.js',
+                        '*.js',
+                        'lib/**/*.js'
+                    ]
+                }
             }
         }
     });

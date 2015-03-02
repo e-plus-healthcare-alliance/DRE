@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/services/dataservice.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/services/dataservice.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">63.73</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">480</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">54.32</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">3.74</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+/**
+ * Data service for access to backend APIs and keeping state of app
+ */
+
+angular.module(&#039;phrPrototypeApp&#039;).service(&#039;dataservice&#039;, function dataservice($http, $q, format, notes) {
+    var that = this;
+
+    //master record (full copy of /api/get_record)
+    //STRUCTURE:
+    //   original record from backend API, looks like BB JSON
+    this.master_record = {};
+
+    //list of all notes (full copy of /api/notes)
+    this.all_notes = {};
+
+    //all merges (full copy of /api/merges)
+    this.all_merges = [];
+    this.merges_record = [];
+    this.merges_billing = [];
+
+    //currently active section (for matches and navigation) -record page
+    this.curr_section = &quot;&quot;;
+
+    //currently active section (for navigation) -billing page
+    this.curr_section_billing = &quot;&quot;;
+
+    //current matches
+    this.curr_matches = [];
+
+    //current match id
+    this.curr_match_id = &quot;&quot;;
+
+    //current processed matches
+    // {category, data, count}
+    this.curr_processed_matches = {};
+
+    //record with 
+    //  injected notes
+    //  matches (for currently selected section)
+    //  counted pending updates (matches)
+    //  STRUCTURE:
+    //      all entries are extracted and flat in one array
+    //      has {category, data, metadata} structure for entries
+    this.processed_record = [];
+
+    //fetch all the data form APIs
+    //including:
+    //  master_record
+    //  notes
+    //  merges
+    //  currently selected matches
+    //
+    //  saves data into local this.* vars (see above)
+    this.fetchData = function (callback) {
+
+        //4 data sources, counted in done() for syncronization
+        var sources = 4;
+        var count = 0;
+
+        var that = this;
+
+        function done(type, err, data) {
+            count = count + 1;
+
+            switch (type) {
+            case &quot;master_record&quot;:
+                that.master_record = data;
+                break;
+            case &quot;notes&quot;:
+                that.all_notes = data;
+                break;
+            case &quot;merges&quot;:
+                that.all_merges = data;
+                break;
+            case &quot;matches&quot;:
+                that.curr_matches = data;
+                break;
+            }
+
+            //callback when all sources are returned
+            if (count === sources) {
+                callback();
+            }
+        }
+
+        this.getMasterRecord(done);
+        this.getNotes(done);
+        this.getMerges(done);
+        this.getMatches(this.curr_section, done);
+
+    };
+
+    this.getMasterRecord = function (callback) {
+        console.log(&#039;getting master record from API&#039;);
+        $http.get(&#039;/api/v1/get_record&#039;)
+            .success(function (data) {
+                console.log(&quot;master record fetched successfuly&quot;);
+                callback(&quot;master_record&quot;, null, data);
+            })
+            .error(function (err) {
+                console.log(&quot;fetching master record failed&quot;, err);
+                callback(&quot;master_record&quot;, err);
+            });
+    };
+
+    this.getNotes = function (callback) {
+        console.log(&#039;getting notes from API&#039;);
+        $http.get(&#039;/api/v1/notes/all&#039;)
+            .success(function (data) {
+                console.log(&quot;notes fetched successfuly&quot;);
+                callback(&quot;notes&quot;, null, data);
+            })
+            .error(function (err) {
+                console.log(&quot;fetching notes failed&quot;, err);
+                callback(&quot;notes&quot;, err);
+            });
+    };
+
+    this.getMerges = function (callback) {
+        console.log(&#039;getting merges from API&#039;);
+        $http.get(&#039;/api/v1/merges&#039;)
+            .success(function (data) {
+                console.log(&quot;merges fetched successfuly&quot;);
+                callback(&quot;merges&quot;, null, data.merges);
+            })
+            .error(function (err) {
+                console.log(&quot;fetching merges failed&quot;, err);
+                callback(&quot;merges&quot;, err);
+            });
+    };
+
+    /* TODO: merge history here
+
+    this.getHistory = function(callback) {
+        console.log(&#039;getting history from API&#039;);
+        $http.get(&#039;/api/v1/notes/all&#039;)
+            .success(function(data) {
+                console.log(&quot;notes fetched successfuly&quot;);
+                callback(&quot;notes&quot;, null, data);
+            })
+            .error(function(err) {
+                console.log(&quot;fetching notes failed&quot;, err);
+                callback(&quot;notes&quot;, err);
+            });
+    };
+        function getHistory() {
+            history.getHistory(function(err, history) {
+                if (err) {
+                    console.log(&#039;ERRROR&#039;, err);
+                } else {
+                    //console.log(&#039;&gt;&gt;&gt;&gt;accountHistory&#039;, history);
+                    $scope.accountHistory = history;
+                }
+            });
+        } 
+
+    */
+
+    this.getMatches = function (section, callback) {
+        //no need to fetch anything if section is all
+        if (!section || section === &quot;all&quot;) {
+            console.log(&#039;no need to fetch matches for all&#039;);
+            callback(&quot;matches&quot;, null, []);
+        } else {
+
+            //translating section name to backend API terms
+            var section_backend = section;
+            switch (section) {
+            case &quot;conditions&quot;:
+                section_backend = &quot;problems&quot;;
+                break;
+            case &quot;social&quot;:
+                section_backend = &quot;social_history&quot;;
+                break;
+            }
+
+            console.log(&#039;getting matches from API for section &#039; + section_backend);
+            $http.get(&#039;/api/v1/matches/&#039; + section_backend)
+                .success(function (data) {
+                    console.log(&quot;matches fetched successfuly&quot;);
+                    callback(&quot;matches&quot;, null, data.matches);
+                })
+                .error(function (err) {
+                    console.log(&quot;fetching matches failed&quot;, err);
+                    callback(&quot;matches&quot;, err);
+                });
+        }
+    };
+
+    //processes data
+    //  calculates displayDates for all entries
+    //  injects notes information in releated entries
+
+    this.processData = function () {
+        this.processed_record = []; //next step will fully rebuild processed record
+
+        _.each(this.master_record, function (entries, type) {
+            _.each(entries, function (entry) {
+                //gate (ignore) possible sections that are not applicable here              
+                if (_.contains([&#039;demographics&#039;, &#039;plan_of_care&#039;], type)) {
+                    //skip to next entry (next iteration)
+                    return;
+                }
+
+                //calculate displayDates for entry based on type
+                var dates = that.extractAndFormatDate(type, entry);
+
+                if (dates.temp === &quot;&quot;) {
+                    dates.temp = [{
+                        &quot;date&quot;: &quot;2015-02-11T00:00:00.000Z&quot;,
+                        &quot;precision&quot;: &quot;day&quot;,
+                        &quot;displayDate&quot;: &quot;Feb 12, 2015&quot;
+                    }];
+                }
+
+                //collate all notes into array (with formatting) for current entry
+                var comments = that.collateComments(entry);
+
+                var display_type = that.displayType(type);
+
+                //formats processed entry for processed record
+                var tmpEntry = {
+                    &#039;data&#039;: entry,
+                    &#039;category&#039;: display_type,
+                    &#039;metadata&#039;: {
+                        &#039;comments&#039;: comments,
+                        &#039;displayDate&#039;: dates.display,
+                        &#039;datetime&#039;: dates.temp
+                    }
+                };
+
+                //add cleaned up and formatted entry to processed entries array
+                that.processed_record.push(tmpEntry);
+            });
+        });
+    };
+
+    //rename internal DRE section names into UI human readable names
+    this.displayType = function (type) {
+        var display_type = type;
+        if (type === &#039;social_history&#039;) {
+            display_type = &#039;social&#039;;
+        }
+        if (type === &#039;payers&#039;) {
+            display_type = &#039;insurance&#039;;
+        }
+        if (type === &#039;problems&#039;) {
+            display_type = &#039;conditions&#039;;
+        }
+
+        return display_type;
+    };
+
+    //collate all notes in formatted array for provided entry
+    //notes data is coming from local service var (all_notes)
+    this.collateComments = function (entry) {
+        var comments = [];
+
+        //find all notes for current entry
+        var note = _.where(this.all_notes, {
+            entry: entry._id
+        });
+
+        //format each note, and collate into array
+        _.each(note, function (n) {
+            var comment = {
+                date: n.date,
+                starred: n.star,
+                comment: n.note,
+                entry_id: n.entry,
+                note_id: n._id
+            };
+
+            comments.push(comment);
+
+        });
+
+        return comments;
+    };
+
+    //takes type of entry (section) and entry data, and returns formatted date (or time interval)
+    this.extractAndFormatDate = function (type, entry) {
+
+        var tmpDates = &#039;&#039;;
+        var displayDates = &#039;&#039;;
+
+        //handling date_time location for lab results
+        if (type === &#039;results&#039; &amp;&amp; !_.isUndefined(entry.results) &amp;&amp; entry.results.length &gt; 0) {
+            if (!_.isUndefined(entry.results[0].date_time.point)) {
+                tmpDates = [entry.results[0].date_time.point];
+            } else if (!_.isUndefined(entry.results[0].date_time.low) &amp;&amp; !_.isUndefined(entry.results[0].date_time.high)) {
+                tmpDates = [entry.results[0].date_time.low, entry.results[0].date_time.high];
+            } else if (!_.isUndefined(entry.results[0].date_time.low) &amp;&amp; _.isUndefined(entry.results[0].date_time.high)) {
+                tmpDates = [entry.results[0].date_time.low];
+            } else if (_.isUndefined(entry.results[0].date_time.low) &amp;&amp; !_.isUndefined(entry.results[0].date_time.high)) {
+                tmpDates = [entry.results[0].date_time.high];
+            }
+        }
+
+        //handling date_time location for payers(insurance)
+        if ((type === &#039;payers&#039; || type === &#039;insurance&#039;) &amp;&amp; !_.isUndefined(entry.participant.date_time)) {
+            if (!_.isUndefined(entry.participant.date_time.point)) {
+                tmpDates = [entry.participant.date_time.point];
+            } else if (!_.isUndefined(entry.participant.date_time.low) &amp;&amp; !_.isUndefined(entry.participant.date_time.high)) {
+                tmpDates = [entry.participant.date_time.low, entry.participant.date_time.high];
+            } else if (!_.isUndefined(entry.participant.date_time.low) &amp;&amp; _.isUndefined(entry.participant.date_time.high)) {
+                tmpDates = [entry.participant.date_time.low];
+            } else if (_.isUndefined(entry.participant.date_time.low) &amp;&amp; !_.isUndefined(entry.participant.date_time.high)) {
+                tmpDates = [entry.participant.date_time.high];
+            }
+        }
+
+        //handling date_time for the rest of the sections
+        if (!_.isUndefined(entry.date_time)) {
+            if (!_.isUndefined(entry.date_time.point)) {
+                tmpDates = [entry.date_time.point];
+            } else if (!_.isUndefined(entry.date_time.low) &amp;&amp; !_.isUndefined(entry.date_time.high)) {
+                tmpDates = [entry.date_time.low, entry.date_time.high];
+            } else if (!_.isUndefined(entry.date_time.low) &amp;&amp; _.isUndefined(entry.date_time.high)) {
+                tmpDates = [entry.date_time.low];
+            } else if (_.isUndefined(entry.date_time.low) &amp;&amp; !_.isUndefined(entry.date_time.high)) {
+                tmpDates = [entry.date_time.high];
+            }
+        }
+
+        if (tmpDates.length === 1) {
+            displayDates = format.formatDate(tmpDates[0]);
+        } else if (tmpDates.length === 2) {
+            displayDates = format.formatDate(tmpDates[0]) + &#039; - &#039; + format.formatDate(tmpDates[1]);
+        }
+
+        return {
+            &quot;display&quot;: displayDates,
+            &quot;temp&quot;: tmpDates
+        };
+    };
+
+    //split merges for display in records view and billing view
+    this.processMerges = function () {
+        var filtered_record = [];
+        var filtered_billing = [];
+
+        _.each(this.all_merges, function (merge) {
+            //console.log(merge);
+
+            // no claims and payers merges here
+            if (!_.contains([&#039;claims&#039;, &#039;payers&#039;], merge.entry_type)) {
+                filtered_record.push(merge);
+            } else {
+                filtered_billing.push(merge);
+            }
+        });
+
+        this.merges_record = filtered_record;
+        this.merges_billing = filtered_billing;
+    };
+
+    //process matches for current section
+    //calculate counts
+    this.processMatches = function () {
+        if (!this.curr_section || this.curr_section === &#039;all&#039;) {
+            return;
+        } else {
+            this.curr_processed_matches = {
+                &#039;category&#039;: this.curr_section,
+                &#039;data&#039;: this.curr_matches,
+                &#039;count&#039;: this.curr_matches.length
+            };
+
+            //clean up previous matches ??
+            _.each(that.processed_record, function (recordEntry) {
+                delete recordEntry.metadata.match;
+            });
+
+            //Wire matches into the record
+            //(for each match)
+
+            console.log(&quot;ALL MATCHES &quot;, that.curr_processed_matches.data);
+            _.each(that.curr_processed_matches.data, function (match) {
+                var match_count = 0;
+
+                //console.log(mat)
+                //console.log(&quot;match id and master entry id&quot;, match._id, match.entry._id, $scope.recordEntries);
+                //find $scope.recordEntries.data._id === match.entry._id
+
+                _.each(that.processed_record, function (recordEntry) {
+                    //console.log(&quot;&gt;&gt;&gt;&gt;&gt; recordEntry &quot;,recordEntry);
+                    //console.log(&quot;&gt;&gt;&gt;&gt;&gt; curr_matches&quot;,that.curr_matches);
+
+                    if (recordEntry.data._id === match.matches[0].match_entry._id) {
+                        //console.log(&quot;attaching match to record &quot;, recordEntry.data._id, &quot; match object MHR.id &quot;,match.matches[0].match_entry._id);
+
+                        //calculate number of pending matches per entry
+
+                        if (recordEntry.metadata.match &amp;&amp; recordEntry.metadata.match.count &gt; 0) {
+                            //console.log(&quot;IF&quot;);
+                            match_count = match_count + recordEntry.metadata.match.count + 1;
+                        } else {
+                            //console.log(&quot;ELSE&quot;);
+                            match_count = match_count + 1;
+                        }
+
+                        recordEntry.metadata.match = {
+                            &#039;match_id&#039;: match._id,
+                            &#039;section&#039;: that.curr_section,
+                            &#039;count&#039;: match_count
+                        };
+
+                        //console.log(&quot;&gt;&gt;&gt;COUNT &quot;, match_count, recordEntry.metadata.match);
+
+                    }
+                    //if (match_count === 0 &amp;&amp; recordEntry.metadata.match) {
+                    //    delete recordEntry.metadata.match;
+                    //}
+                });
+
+            });
+        }
+
+    };
+
+    //THIS IS THE FUNCTION YOU ARE LOOKING FOR!
+    //
+    //processes fetched data
+    //including:
+    //  master_record
+    //      processes record
+    //  notes
+    //      calculates count of starred notes per element
+    //  merges
+    //      does nothing...???
+    //  currently selected matches
+    //      calculates counts of matches per element
+    this.getData = function (callback) {
+        console.log(&quot;in get data&quot;);
+
+        this.fetchData(function () {
+            //once all the data is fetched
+            //process it
+
+            that.processed_record = []; //next step will fully rebuild processed record
+            that.processData();
+
+            //split merges between records view and billing view
+            that.processMerges();
+
+            //wrap match object and calculate all the counts (of pending updates per record)
+            that.processMatches();
+
+            //at this point this.processed_record is ready to use
+
+            console.log(&quot;before callback&quot;);
+            callback();
+
+        });
+    };
+
+    this.getMatchesData = function (callback) {
+        console.log(&quot;in get matches data&quot;);
+
+        this.getMatches(this.curr_section, function (type, err, data) {
+            //once all the data is fetched
+
+            that.curr_matches = data;
+
+            //process it
+
+            //wrap match object and calculate all the counts (of pending updates per record)
+            that.processMatches();
+
+            //at this point this.processed_record is ready to use
+
+            console.log(&quot;before callback from getMatchesData&quot;);
+            callback();
+
+        });
+    };
+
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/controllers/notes.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/controllers/notes.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">54.75</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">500</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">65.11</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">5.61</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+/**
+ * @ngdoc function
+ * @name phrPrototypeApp.controller:NotesCtrl
+ * @description
+ * # NotesCtrl
+ * Controller of the phrPrototypeApp
+ */
+angular.module(&#039;phrPrototypeApp&#039;).controller(&#039;NotesCtrl&#039;, function ($scope, notes, format, dataservice) {
+    $scope.any_sections_selected = false;
+
+    $scope.notes = [];
+    $scope.filters = [{
+        &#039;name&#039;: &#039;starred&#039;,
+        &#039;value&#039;: true,
+        &#039;displayName&#039;: &#039;starred&#039;
+    }, {
+        &#039;name&#039;: &#039;unStarred&#039;,
+        &#039;value&#039;: true,
+        &#039;displayName&#039;: &#039;un-starred&#039;
+    }];
+
+    /*
+    //gets notes from backend API
+    function getNotes() {
+        notes.getNotes(function(err, returnNotes) {
+            $scope.notes = mashNotesWithRecord(returnNotes, $scope.masterRecord);
+            $scope.filters = updateFilters(returnNotes);
+            updateAnySectionsSelected();
+        });
+    }
+    */
+
+    //TODO may need callback
+    function refresh() {
+        dataservice.curr_section_billing = $scope.entryType;
+        dataservice.getData(function () {
+            console.log(Date.now(), &quot;MAGIC IS HERE: &quot;, dataservice.processed_record);
+            //console.log(&quot;MORE: &quot;, dataservice.all_merges, dataservice.merges_record, dataservice.merges_billing);
+
+            $scope.masterRecord = dataservice.master_record;
+            $scope.notes = mashNotesWithRecord(dataservice.all_notes, $scope.masterRecord);
+            $scope.filters = updateFilters(dataservice.all_notes);
+            updateAnySectionsSelected();
+
+        });
+    }
+
+    refresh();
+
+    //updated flag that says if any sections are selected to view
+    function updateAnySectionsSelected() {
+        $scope.any_sections_selected = false;
+        _.each($scope.filters, function (filter) {
+            if (filter.name !== &quot;starred&quot; &amp;&amp; filter.name !== &quot;unStarred&quot; &amp;&amp; filter.value) {
+                $scope.any_sections_selected = true;
+            }
+        });
+    }
+    $scope.toggle = function (index) {
+        $scope.filters[index].value = !$scope.filters[index].value;
+        //calculate if no sections are selected
+        updateAnySectionsSelected();
+        $scope.checkNotes();
+    };
+    $scope.toggleAll = function () {
+        _.each($scope.filters, function (value, key, list) {
+            $scope.filters[key].value = true;
+        });
+        $scope.checkNotes();
+    };
+    //$.lockfixed(&quot;.sidebar-control&quot;,{offset: {top: 10},forcemargin: true});
+
+    /* EXAMPLE OF NOTES DATA
+    [{
+        &quot;_id&quot;: &quot;54d503e8c053a20a26f2ee47&quot;,
+        &quot;username&quot;: &quot;test&quot;,
+        &quot;section&quot;: &quot;vitals&quot;,
+        &quot;entry&quot;: &quot;54d500c1b1fca190214985f1&quot;,
+        &quot;note&quot;: &quot;fatty fat!&quot;,
+        &quot;__v&quot;: 0,
+        &quot;star&quot;: false,
+        &quot;datetime&quot;: &quot;2015-02-06T18:11:52.031Z&quot;
+    }, {
+        &quot;_id&quot;: &quot;54d503ecc053a20a26f2ee48&quot;,
+        &quot;username&quot;: &quot;test&quot;,
+        &quot;section&quot;: &quot;vitals&quot;,
+        &quot;entry&quot;: &quot;54d500c1b1fca190214985f1&quot;,
+        &quot;note&quot;: &quot;fatty fat!&quot;,
+        &quot;__v&quot;: 0,
+        &quot;star&quot;: false,
+        &quot;datetime&quot;: &quot;2015-02-06T18:11:56.350Z&quot;
+    }, {
+        &quot;_id&quot;: &quot;54d5046bc053a20a26f2ee4b&quot;,
+        &quot;username&quot;: &quot;test&quot;,
+        &quot;section&quot;: &quot;allergies&quot;,
+        &quot;entry&quot;: &quot;54d42901c1647f0000ffad24&quot;,
+        &quot;note&quot;: &quot;love my drugs!&quot;,
+        &quot;__v&quot;: 0,
+        &quot;star&quot;: false,
+        &quot;datetime&quot;: &quot;2015-02-06T18:14:03.991Z&quot;
+    }]
+
+    */
+    /* NOTES OBJECT
+
+    [{
+        &#039;displaySection&#039;: &#039;vital signs&#039;,
+        &#039;section&#039;: &#039;vitals&#039;,
+        &#039;notes&#039;: [{
+            &#039;entryTitle&#039;: &#039;Blood pressure&#039;,
+            &#039;entrySubTitleOne&#039;: &#039;January 1, 2015&#039;,
+            &#039;entrySubTitleTwo&#039;: &#039;120/80&#039;,
+            &#039;note&#039;: {
+                &#039;comment&#039;: &#039;too high!&#039;,
+                &#039;date&#039;: &#039;2015-01-01&#039;,
+                &#039;starred&#039;: true
+            }
+        }]
+
+    }]
+    */
+    function titles(scope) {
+            scope.entryTitle = &quot;&quot;;
+            scope.entrySubTitleOne = &quot;&quot;;
+            scope.entrySubTitleTwo = &quot;&quot;;
+
+            var entry = scope.entryData;
+            //console.log(&quot;TITLES: &quot;, entry);
+            var tmpDates = [];
+            var dispDates = &quot;Not Available&quot;;
+
+            if (!_.isUndefined(entry.date_time)) {
+                if (!_.isUndefined(entry.date_time.point)) {
+                    tmpDates = [entry.date_time.point];
+                } else if (!_.isUndefined(entry.date_time.low) &amp;&amp; !_.isUndefined(entry.date_time.high)) {
+                    tmpDates = [entry.date_time.low, entry.date_time.high];
+                } else if (!_.isUndefined(entry.date_time.low) &amp;&amp; _.isUndefined(entry.date_time.high)) {
+                    tmpDates = [entry.date_time.low];
+                } else if (_.isUndefined(entry.date_time.low) &amp;&amp; !_.isUndefined(entry.date_time.high)) {
+                    tmpDates = [entry.date_time.high];
+                }
+            }
+
+            if (!_.isUndefined(entry.results) &amp;&amp; entry.results.length &gt; 0) {
+                if (!_.isUndefined(entry.results[0].date_time.point)) {
+                    tmpDates = [entry.results[0].date_time.point];
+                } else if (!_.isUndefined(entry.results[0].date_time.low) &amp;&amp; !_.isUndefined(entry.results[0].date_time.high)) {
+                    tmpDates = [entry.results[0].date_time.low, entry.results[0].date_time.high];
+                } else if (!_.isUndefined(entry.results[0].date_time.low) &amp;&amp; _.isUndefined(entry.results[0].date_time.high)) {
+                    tmpDates = [entry.results[0].date_time.low];
+                } else if (_.isUndefined(entry.results[0].date_time.low) &amp;&amp; !_.isUndefined(entry.results[0].date_time.high)) {
+                    tmpDates = [entry.results[0].date_time.high];
+                }
+            }
+
+            console.log(&quot;&gt;&gt;&gt;&gt;&gt; &quot;, entry, entry.participant);
+
+            if (!_.isUndefined(entry.participant) &amp;&amp; !_.isUndefined(entry.participant.date_time)) {
+                if (!_.isUndefined(entry.participant.date_time.point)) {
+                    tmpDates = [entry.participant.date_time.point];
+                } else if (!_.isUndefined(entry.participant.date_time.low) &amp;&amp; !_.isUndefined(entry.participant.date_time.high)) {
+                    tmpDates = [entry.participant.date_time.low, entry.participant.date_time.high];
+                } else if (!_.isUndefined(entry.participant.date_time.low) &amp;&amp; _.isUndefined(entry.participant.date_time.high)) {
+                    tmpDates = [entry.participant.date_time.low];
+                } else if (_.isUndefined(entry.participant.date_time.low) &amp;&amp; !_.isUndefined(entry.participant.date_time.high)) {
+                    tmpDates = [entry.participant.date_time.high];
+                }
+            }
+
+            if (tmpDates.length === 1) {
+                dispDates = format.formatDate(tmpDates[0]);
+            } else if (tmpDates.length === 2) {
+                dispDates = format.formatDate(tmpDates[0]) + &#039; - &#039; + format.formatDate(tmpDates[1]);
+            }
+
+            scope.recordEntry.metadata.displayDate = dispDates;
+
+            switch (scope.type) {
+            case &#039;allergies&#039;:
+                if (scope.entryData.observation) {
+                    if (scope.entryData.observation.allergen &amp;&amp; scope.entryData.observation.allergen.name) {
+                        scope.entryTitle = scope.entryData.observation.allergen.name;
+                    }
+                    if (scope.entryData.observation.severity &amp;&amp; scope.entryData.observation.severity.code &amp;&amp; scope.entryData.observation.severity.code.name) {
+                        scope.entrySubTitleOne = scope.entryData.observation.severity.code.name;
+                    }
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;encounters&#039;:
+                if (scope.entryData.encounter &amp;&amp; scope.entryData.encounter.name) {
+                    scope.entryTitle = scope.entryData.encounter.name;
+                }
+                if (scope.entryData.locations &amp;&amp; scope.entryData.locations[0].name) {
+                    scope.entrySubTitleOne = scope.entryData.locations[0].name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;immunizations&#039;:
+                if (scope.entryData.product &amp;&amp; scope.entryData.product.product &amp;&amp; scope.entryData.product.product.name) {
+                    scope.entryTitle = scope.entryData.product.product.name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;medications&#039;:
+                if (scope.entryData.product &amp;&amp; scope.entryData.product.product &amp;&amp; scope.entryData.product.product.name) {
+                    scope.entryTitle = scope.entryData.product.product.name;
+                }
+                if (scope.entryData.administration &amp;&amp; scope.entryData.administration.route &amp;&amp; scope.entryData.administration.route.name) {
+                    scope.entrySubTitleOne = scope.entryData.administration.route.name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;conditions&#039;:
+                console.log(&quot;conditions&gt;&gt;&gt;&gt;&gt;&quot;, scope.recordEntry, scope.entryData);
+
+                if (scope.entryData.problem &amp;&amp; scope.entryData.problem.code &amp;&amp; scope.entryData.problem.code.name) {
+                    scope.entryTitle = scope.entryData.problem.code.name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;procedures&#039;:
+                if (scope.entryData.procedure &amp;&amp; scope.entryData.procedure.name) {
+                    scope.entryTitle = scope.entryData.procedure.name;
+                }
+                if (scope.entryData.status) {
+                    scope.entrySubTitleOne = scope.entryData.status;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;vitals&#039;:
+                var quantityUnit = &quot;&quot;;
+                if (scope.entryData.unit) {
+                    if (scope.entryData.unit === &quot;[in_i]&quot;) {
+                        quantityUnit = &quot;inches&quot;;
+                    } else if (scope.entryData.unit === &quot;[lb_av]&quot;) {
+                        quantityUnit = &quot;lbs&quot;;
+                    } else if (scope.entryData.unit === &quot;mm[Hg]&quot;) {
+                        quantityUnit = &quot;mm&quot;;
+                    } else {
+                        quantityUnit = scope.entryData.unit;
+                    }
+                    if (scope.entryData.value &amp;&amp; scope.entryData.value + &quot; &quot; + quantityUnit) {
+                        scope.entryTitle = scope.entryData.value + &quot; &quot; + quantityUnit;
+                    }
+                }
+                if (scope.entryData.vital &amp;&amp; scope.entryData.vital.name) {
+                    scope.entrySubTitleOne = scope.entryData.vital.name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;results&#039;:
+                if (scope.entryData.result_set &amp;&amp; scope.entryData.result_set.name) {
+                    scope.entryTitle = scope.entryData.result_set.name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;social&#039;:
+                console.log(&quot;social&gt;&gt;&gt;&gt;&gt;&quot;, scope.recordEntry, scope.entryData);
+
+                if (scope.entryData.value) {
+                    scope.entryTitle = scope.entryData.value;
+                }
+                if (scope.entryData.code &amp;&amp; scope.entryData.code.name) {
+                    scope.entrySubTitleOne = scope.entryData.code.name;
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleTwo = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;claims&#039;:
+                if (scope.entryData.payer[0]) {
+                    scope.entryTitle = scope.entryData.payer[0];
+                }
+                if (scope.recordEntry.metadata.displayDate) {
+                    scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            case &#039;insurance&#039;:
+                console.log(&quot;insurance&gt;&gt;&gt;&gt;&gt;&quot;, scope.recordEntry, scope.entryData);
+                if (scope.entryData.policy.insurance.performer.organization[0].name[0]) {
+                    scope.entryTitle = scope.entryData.policy.insurance.performer.organization[0].name[0];
+                }
+                if (scope.entryData.date_time) {
+                    scope.entrySubTitleOne = scope.recordEntry.metadata.displayDate;
+                }
+                break;
+            }
+            return scope;
+        }
+        //convert internal section name to display friendly spelled out name
+    function displaySection(section) {
+        var displayName = {
+            &#039;vitals&#039;: &#039;vital signs&#039;,
+            &#039;results&#039;: &#039;test results&#039;,
+            &#039;social&#039;: &#039;social history&#039;
+        };
+        if (displayName[section]) {
+            return displayName[section];
+        } else {
+            return section;
+        }
+    }
+
+    function mashNotesWithRecord(notes, record) {
+        console.log(&quot;mashNotesWithRecord &quot;, notes, record);
+        //generating list of unique sections present in notes
+        var notes_sections = [];
+        notes_sections = _.pluck(notes, &quot;section&quot;);
+        notes_sections = _.uniq(notes_sections);
+
+        console.log(&quot;sections present in notes &quot;, notes_sections);
+
+        var stub2 = [];
+        _.each(notes_sections, function (section) {
+            /*
+            switch (section) {
+                case &quot;conditions&quot;:
+                    section = &quot;problems&quot;;
+                    break;
+                case &quot;social&quot;:
+                    section = &quot;social_history&quot;;
+                    break;
+                case &quot;insurance&quot;:
+                    section = &quot;insurance&quot;;
+                    break;
+            }
+            */
+
+            var section_notes = [];
+            section_notes = _.filter(notes, {
+                section: section
+            });
+            var section_notes_with_entry = [];
+            _.each(section_notes, function (note) {
+                var result = {};
+                result = {
+                    &#039;entryTitle&#039;: note.entry,
+                    &#039;entrySubTitleOne&#039;: &#039;&#039;,
+                    &#039;entrySubTitleTwo&#039;: &#039;&#039;,
+                    &#039;entry_id&#039;: note.entry,
+                    &#039;note&#039;: {
+                        &#039;comment&#039;: note.note,
+                        &#039;date&#039;: note.datetime,
+                        &#039;starred&#039;: note.star,
+                        &#039;note_id&#039;: note._id
+                    }
+                };
+
+                var section_mod = section;
+                switch (section) {
+                case &quot;conditions&quot;:
+                    section_mod = &quot;problems&quot;;
+                    break;
+                case &quot;social&quot;:
+                    section_mod = &quot;social_history&quot;;
+                    break;
+                case &quot;insurance&quot;:
+                    section_mod = &quot;payers&quot;;
+                    break;
+                }
+
+                var ff = _.where(record[section_mod], {
+                    &#039;_id&#039;: note.entry
+                })[0];
+
+                if (!ff) {
+                    console.log(&quot;BAAAD!!!!!&quot;, section, record[section_mod], record);
+                    ff = {};
+                }
+
+                var entry_data = {
+                    entryData: ff,
+                    type: section,
+                    recordEntry: {
+                        metadata: {}
+                    }
+                };
+
+                var tttt = titles(entry_data);
+                result.entryTitle = tttt.entryTitle;
+                result.entrySubTitleOne = tttt.entrySubTitleOne;
+                result.entrySubTitleTwo = tttt.entrySubTitleTwo;
+                section_notes_with_entry.push(result);
+            });
+            var result = {
+                &#039;displaySection&#039;: displaySection(section),
+                &#039;section&#039;: section,
+                &#039;notes&#039;: section_notes_with_entry
+            };
+            stub2.push(result);
+        });
+        return stub2;
+    }
+
+    //updates list of sections in filters based on what sections are present in notes
+    function updateFilters(notes) {
+        var filters = $scope.filters;
+        //generating list of unique sections present in notes
+        var notes_sections = [];
+        notes_sections = _.pluck(notes, &quot;section&quot;);
+        notes_sections = _.uniq(notes_sections);
+        _.each(notes_sections, function (section) {
+            filters.push({
+                &#039;name&#039;: section,
+                &#039;value&#039;: true,
+                &#039;displayName&#039;: displaySection(section)
+            });
+        });
+        return filters;
+    }
+    $scope.clickStar = function (starVal, starIndex, section, entry) {
+        console.log(&quot;click Star &quot;, !starVal, starIndex, section, entry);
+        notes.starNote(entry.note.note_id, !starVal, function (err, data) {
+            console.log(&#039;err &#039;, err);
+            console.log(&#039;updated note &#039;, data);
+        });
+        var tmpSection = _.where($scope.notes, {
+            &#039;section&#039;: section
+        });
+
+        //console.log (&quot;TMP SECTION &gt;&gt; &quot;, tmpSection);
+        //console.log(&#039;starVal&#039;, starVal);
+        //console.log(tmpSection[0].notes);
+
+        _.each(tmpSection[0].notes, function (note) {
+            if (entry.note.note_id === note.note.note_id) {
+                note.note.starred = !starVal;
+            }
+
+        });
+    };
+
+    $scope.checkNotes = function () {
+        $scope.starredNotes = false;
+        $scope.unstarredNotes = false;
+        _.each($scope.filters, function (filter, index) {
+            if (index &gt; 1) {
+                if (filter.value) {
+                    var section = filter.name;
+                    /*
+                    switch (section) {
+                        case &quot;conditions&quot;:
+                            section = &quot;problems&quot;;
+                            break;
+                        case &quot;social&quot;:
+                            section = &quot;social_history&quot;;
+                            break;
+                    }
+                    */
+
+                    var tmpnotes = _.findWhere($scope.notes, {
+                        &#039;section&#039;: section
+                    });
+                    //console.log(tmpnotes, section);
+                    _.each(tmpnotes.notes, function (note) {
+                        if (note.note.starred) {
+                            $scope.starredNotes = true;
+                        } else {
+                            $scope.unstarredNotes = true;
+                        }
+                    });
+
+                }
+            }
+        });
+    };
+    $scope.noMatch = function () {
+        $scope.checkNotes();
+        if (!$scope.unstarredNotes &amp;&amp; !$scope.filters[0].value) {
+            return true;
+        }
+        if (!$scope.starredNotes &amp;&amp; !$scope.filters[1].value) {
+            return true;
+        }
+        if (!$scope.filters[0].value &amp;&amp; !$scope.filters[1].value) {
+            return true;
+        }
+        if (!$scope.any_sections_selected) {
+            return true;
+        }
+    };
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

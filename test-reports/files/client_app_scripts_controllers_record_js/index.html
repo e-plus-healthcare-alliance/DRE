@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - client/app/scripts/controllers/record.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>client/app/scripts/controllers/record.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">64.69</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">435</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">48.54</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">3.78</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">&#039;use strict&#039;;
+
+angular.module(&#039;phrPrototypeApp&#039;).controller(&#039;RecordCtrl&#039;, function ($scope, $window, $location, format, matches, merges, history, dataservice) {
+    console.log(&quot;RECORD CONTROLLER LOAD &quot;);
+
+    $scope.dashMetrics = {};
+    $scope.tabs = [{
+        &quot;title&quot;: &quot;Weight&quot;,
+        &quot;data&quot;: {},
+        &quot;chartName&quot;: &quot;d3template&quot;
+    }, {
+        &quot;title&quot;: &quot;Blood Pressure&quot;,
+        &quot;data&quot;: {},
+        &quot;chartName&quot;: &quot;d3template&quot;
+    }];
+    $scope.$watch(&#039;tabs.activeTab&#039;, function (newVal, oldVal) {
+        console.log(&#039;TAB CHANGE&#039;);
+        if (newVal !== oldVal) {
+            $scope.$broadcast(&#039;tabchange&#039;, {
+                &quot;val&quot;: newVal
+            });
+        }
+    });
+    $scope.tabs.activeTab = 0;
+
+    angular.element(&quot;#nav&quot; + $scope.entryType).removeClass(&quot;active&quot;);
+    if (!dataservice.curr_section) {
+        $scope.entryType = &quot;all&quot;;
+        dataservice.curr_section = $scope.entryType;
+    } else {
+        $scope.entryType = dataservice.curr_section;
+    }
+    angular.element(&quot;#nav&quot; + $scope.entryType).addClass(&quot;active&quot;);
+
+    console.log(Date.now(), &quot; MAGIC OF DATASERVICE STARTS!&quot;);
+
+    //TODO may need callback
+    function refresh() {
+        dataservice.curr_section = $scope.entryType;
+        dataservice.getData(function () {
+            console.log(Date.now(), &quot;MAGIC IS HERE: &quot;, dataservice.processed_record);
+            //console.log(&quot;MORE: &quot;, dataservice.all_merges, dataservice.merges_record, dataservice.merges_billing);
+
+            pageRender(dataservice.master_record, dataservice.all_notes);
+            $scope.masterMatches = dataservice.curr_processed_matches;
+
+            //update merges in scope
+            $scope.mergesList_record = dataservice.merges_record;
+            $scope.mergesList_billing = dataservice.merges_billing;
+            $scope.mergesList = dataservice.all_merges;
+
+        });
+    }
+
+    refresh();
+
+    //Flip All as active selected item in DOM
+    function getHistory() {
+        history.getHistory(function (err, history) {
+            if (err) {
+                console.log(&#039;ERRROR&#039;, err);
+            } else {
+                //console.log(&#039;&gt;&gt;&gt;&gt;accountHistory&#039;, history);
+                $scope.accountHistory = history;
+            }
+        });
+    }
+    getHistory();
+
+    // produces singular name for section name - in records merges list
+    $scope.singularName = function (section) {
+        switch (section) {
+        case &#039;social_history&#039;:
+            return &#039;social history&#039;;
+        case &#039;vitals&#039;:
+            return &#039;vital sign&#039;;
+        case &#039;allergies&#039;:
+            return &#039;allergy&#039;;
+        case &#039;medications&#039;:
+            return &#039;medication&#039;;
+        case &#039;problems&#039;:
+            return &#039;problem&#039;;
+        case &#039;claims&#039;:
+            return &#039;claim&#039;;
+        case &#039;results&#039;:
+            return &#039;test result&#039;;
+        case &#039;encounters&#039;:
+            return &#039;encounter&#039;;
+        case &#039;immunizations&#039;:
+            return &#039;immunization&#039;;
+        case &#039;procedures&#039;:
+            return &#039;procedure&#039;;
+        case &#039;claims&#039;:
+            return &#039;claim&#039;;
+        case &#039;insurance&#039;:
+            return &#039;insurance&#039;;
+        case &#039;payers&#039;:
+            return &#039;payer&#039;;
+        default:
+            return section;
+        }
+    };
+
+    function pageRender(data, data_notes) {
+
+        //calculate current height/weight/bmi/blood pressure
+        //based on processed record from $scope.recordEntries
+        function dashPrep() {
+            var weightDateArray = [];
+            var heightDateArray = [];
+            var bpDateArraySystolic = [];
+            var bpDateArrayDiastolic = [];
+            //Build arrays of all dates per section.
+            _.each($scope.recordEntries, function (entry) {
+                var vitalEntry = {};
+                //skip non vitals entries
+                if (entry.category !== &quot;vitals&quot;) {
+                    return;
+                } else {
+                    vitalEntry = entry;
+                }
+                console.log(&quot;vital entry &quot;, vitalEntry);
+
+                if (vitalEntry.data.vital.name === &quot;Height&quot;) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        heightDateArray.push(moment(dateArr.date));
+                    });
+                }
+                if (vitalEntry.data.vital.name === &quot;Patient Body Weight - Measured&quot;) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        weightDateArray.push(moment(dateArr.date));
+                    });
+                }
+                if (vitalEntry.data.vital.name === &quot;Intravascular Systolic&quot;) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        bpDateArraySystolic.push(moment(dateArr.date));
+                    });
+                }
+                if (vitalEntry.data.vital.name === &quot;Intravascular Diastolic&quot;) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        bpDateArrayDiastolic.push(moment(dateArr.date));
+                    });
+                }
+            });
+            //Flag maxes.
+            var heightMaxDate = moment.max(heightDateArray);
+            var weightMaxDate = moment.max(weightDateArray);
+            var bpMaxDateDiastolic = moment.max(bpDateArrayDiastolic);
+            var bpMaxDateSystolic = moment.max(bpDateArraySystolic);
+            //Recover associated max value.
+            _.each($scope.entries.vitals, function (vitalEntry2) {
+                var vitalEntry = {
+                    &quot;data&quot;: vitalEntry2
+                };
+
+                //Find most current height.
+                if (vitalEntry.data.vital.name.indexOf(&quot;Height&quot;) &gt; -1) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        if (moment(moment(dateArr.date)).isSame(heightMaxDate, &#039;day&#039;)) {
+                            $scope.dashMetrics.height = {
+                                value: vitalEntry.data.value,
+                                unit: vitalEntry.data.unit
+                            };
+                        }
+                    });
+                }
+                if (vitalEntry.data.vital.name.indexOf(&quot;Weight&quot;) &gt; -1) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        if (moment(moment(dateArr.date)).isSame(weightMaxDate, &#039;day&#039;)) {
+                            $scope.dashMetrics.weight = {
+                                value: vitalEntry.data.value,
+                                unit: vitalEntry.data.unit
+                            };
+                        }
+                    });
+                }
+                if (vitalEntry.data.vital.name.indexOf(&quot;Systolic&quot;) &gt; -1) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        if (moment(moment(dateArr.date)).isSame(bpMaxDateSystolic, &#039;day&#039;)) {
+                            $scope.dashMetrics.systolic = {
+                                value: vitalEntry.data.value,
+                                unit: vitalEntry.data.unit
+                            };
+                        }
+                    });
+                }
+                if (vitalEntry.data.vital.name.indexOf(&quot;Diastolic&quot;) &gt; -1) {
+                    _.each(vitalEntry.data.date_time, function (dateArr) {
+                        if (moment(moment(dateArr.date)).isSame(bpMaxDateDiastolic, &#039;day&#039;)) {
+                            $scope.dashMetrics.diastolic = {
+                                value: vitalEntry.data.value,
+                                unit: vitalEntry.data.unit
+                            };
+                        }
+                    });
+                }
+            });
+
+            console.log(&quot;dash metrics &gt;&gt;&gt;&gt;&quot;, $scope.dashMetrics);
+
+            //convert height to inches if needed
+            if ($scope.dashMetrics.height.unit === &quot;cm&quot;) {
+                $scope.dashMetrics.height.unit = &quot;[in_us]&quot;;
+                $scope.dashMetrics.height.value = 0.393701 * $scope.dashMetrics.height.value;
+            }
+
+            //Format height output.
+            if ($scope.dashMetrics.height.unit === &quot;[in_us]&quot;) {
+                var displayHeight = Math.floor(($scope.dashMetrics.height.value / 12)) + &quot;&#039; &quot; + $scope.dashMetrics.height.value % 12 + &#039;&quot;&#039;;
+                $scope.dashMetrics.height.disp = displayHeight;
+            }
+
+            //convert weight to lbs
+            if ($scope.dashMetrics.weight.unit === &quot;kg&quot;) {
+                $scope.dashMetrics.weight.unit = &quot;[lb_av]&quot;;
+                $scope.dashMetrics.weight.value = 2.20462 * $scope.dashMetrics.weight.value;
+            }
+            //Format weight output.
+            if ($scope.dashMetrics.weight.unit === &quot;[lb_av]&quot;) {
+                var displayWeight = Math.floor($scope.dashMetrics.weight.value) + &quot; lbs&quot;;
+                $scope.dashMetrics.weight.disp = displayWeight;
+            }
+            //BMI Calculation
+            //Expects US units.
+            function calculateBMI(weight, height) {
+                var BMI = (weight * 703) / (height * height);
+                BMI = BMI.toFixed(1);
+                return BMI;
+            }
+            $scope.dashMetrics.bmi = calculateBMI($scope.dashMetrics.weight.value, $scope.dashMetrics.height.value);
+        }
+
+        //$scope.entryList = [];
+
+        /*
+        function formatDates() {
+            //Flatten to timeline.
+            console.log($scope.entries);
+            
+            _.each($scope.entries, function(entry, section) {
+                _.each(entry, function(item) {
+                    var tmpItem = item;
+                    console.log(tmpItem);
+                    tmpItem.category = section;
+                    $scope.entryList.push(tmpItem);
+                });
+            });
+
+            _.each($scope.entryList, function(entry) {
+
+                console.log(entry.data.date_time);
+
+                _.each(entry.data.date_time, function(dateEntry, dateTitle) {
+                    if (dateTitle !== &#039;displayDate&#039; &amp;&amp; dateTitle !== &#039;plotDate&#039;) {
+                        format.formatDate(dateEntry);
+                    }
+                });
+
+                //Have to generate date for results.
+                if (entry.category === &#039;results&#039;) {
+                    var dateArray = [];
+                    entry.data.date_time = {};
+
+                    //Fill out each result&#039;s individual date.
+                    if (entry.data.results) {
+                        _.each(entry.data.results, function(result) {
+                            _.each(result.date_time, function(dateEntry, dateTitle) {
+                                if (dateTitle !== &#039;displayDate&#039; &amp;&amp; dateTitle !== &#039;plotDate&#039;) {
+                                    format.formatDate(dateEntry);
+                                    dateArray.push(moment(dateEntry.date));
+                                }
+                            });
+                            result.date_time.displayDate = format.outputDate(result.date_time);
+                        });
+                    }
+
+                    var momentMin = moment.min(dateArray);
+                    var momentMax = moment.max(dateArray);
+
+                    //If date min and max are equal, consolidate.
+                    //Only have test data, should expand to other cases in deploy.
+                    if (momentMin.isSame(momentMax, &#039;day&#039;)) {
+                        entry.data.date_time.point = {};
+                        entry.data.date_time.point.date = momentMin.toISOString();
+                        entry.data.date_time.point.precision = &#039;day&#039;;
+                        entry.data.date_time.point.displayDate = format.formatDate(entry.data.date_time.point);
+                    }
+
+                }
+
+                entry.data.date_time.displayDate = format.outputDate(entry.data.date_time);
+                entry.data.date_time.plotDate = format.plotDate(entry.data.date_time);
+            });
+        }
+        */
+
+        function sortList() {
+            $scope.entryList = _.sortBy($scope.entryList, function (entry) {
+                return entry.data.date_time.plotDate;
+            });
+            $scope.entryList.reverse();
+        }
+
+        $scope.recordEntries = dataservice.processed_record;
+        console.log(&quot;processed record &quot;, dataservice.processed_record);
+        console.log(&quot;master record &quot;, dataservice.master_record);
+
+        $scope.entries = dataservice.master_record;
+
+        console.log(&quot;&gt;&gt;&gt; master record &quot;, $scope.entries);
+
+        dashPrep();
+        //formatDates();
+        //sortList();
+        $scope.tabs.activeTab = 0;
+
+        $scope.recordEntries = _.sortBy($scope.recordEntries, function (entry) {
+            if (entry.metadata.datetime[0]) {
+                return entry.metadata.datetime[0].date.substring(0, 9);
+            } else {
+                return &#039;1979-12-12&#039;;
+            }
+        }).reverse();
+
+        if ($scope.entryType === &quot;all&quot;) {
+            $scope.entryListFiltered = $scope.recordEntries;
+        } else {
+            $scope.entryType = dataservice.curr_section;
+
+            console.log(&quot;UNFILTERED &quot;, $scope.recordEntries);
+            $scope.entryListFiltered = _.where($scope.recordEntries, {
+                category: $scope.entryType
+            });
+            console.log(&quot;category &quot;, $scope.entryType);
+            console.log(&quot;FILTERED &quot;, $scope.entryListFiltered);
+        }
+
+        //$scope.pageLoaded = false;
+
+        if (_.isEmpty(dataservice.curr_section)) {
+            $scope.entryType = &quot;all&quot;;
+        } else {
+            $scope.entryType = dataservice.curr_section;
+        }
+
+        //Flip All as active selected item in DOM
+        angular.element(&quot;#nav&quot; + $scope.entryType).addClass(&quot;active&quot;);
+
+        $scope.$watch(&#039;entryType&#039;, function (newVal, oldVal) {
+            //keeping current section name in scope
+            //alert(&#039;entryType new:&#039;+newVal+&quot; old:&quot;+oldVal);
+            $scope.entryType = newVal;
+            dataservice.curr_section = $scope.entryType;
+            console.log(&quot;$scope.entryType = &quot;, $scope.entryType);
+
+            if (newVal !== oldVal) {
+                if (newVal === &quot;all&quot;) {
+                    $scope.entryListFiltered = $scope.recordEntries;
+
+                    dataservice.curr_section = &quot;all&quot;;
+                    $scope.entryType = dataservice.curr_section;
+                } else {
+
+                    console.log(&quot;UNFILTERED &quot;, $scope.recordEntries);
+
+                    $scope.entryListFiltered = _.where($scope.recordEntries, {
+                        category: newVal
+                    });
+                    console.log(&quot;category &quot;, newVal);
+                    console.log(&quot;FILTERED &quot;, $scope.entryListFiltered);
+
+                    dataservice.curr_section = newVal;
+                    $scope.entryType = dataservice.curr_section;
+
+                }
+                if (newVal === &quot;vitals&quot;) {
+                    $scope.$broadcast(&#039;tabchange&#039;, {
+                        &quot;val&quot;: 0
+                    });
+                }
+            }
+
+            //TODO get matches data again, here
+
+            dataservice.curr_section = $scope.entryType;
+            dataservice.getMatchesData(function () {
+
+                $scope.masterMatches = dataservice.curr_processed_matches;
+                $scope.recordEntries = dataservice.processed_record;
+
+                $scope.recordEntries = _.sortBy($scope.recordEntries, function (entry) {
+                    if (entry.metadata.datetime[0]) {
+                        return entry.metadata.datetime[0].date.substring(0, 9);
+                    } else {
+                        return &#039;1979-12-12&#039;;
+                    }
+                }).reverse();
+
+            });
+
+            $scope.pageLoaded = !$scope.pageLoaded;
+
+        });
+
+        /*
+        var delayInMilliseconds = 250;
+        setTimeout(function() {
+            // Your code here (triggering timeline to reload)
+            console.log(&quot;page loaded trigger&quot;);
+            $scope.pageLoaded = !$scope.pageLoaded;
+
+        }, delayInMilliseconds);
+        */
+
+    }
+
+    //console.log(&quot;&gt;&gt;&gt;&gt;&gt;&gt;&quot;, record.masterRecord, record.recordDirty);
+
+    $scope.goToMatches = function (section) {
+        //console.log(section);
+        //matches.setSection(section);
+        $location.path(&#039;/matches&#039;);
+    };
+    //launch specific match (by ID and section name)
+    $scope.launchMatch = function (el) {
+        console.log(&quot;Launch MATCH&gt;&gt; &quot;, el);
+        //console.log(section);
+        //setting section name for matches page
+        matches.setSection(el.match.section);
+        //TODO: set match ID for match page
+        matches.setMatchId(el.match.match_id);
+
+        $location.path(&#039;/matches&#039;);
+    };
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
